@@ -8,7 +8,10 @@
 library(seqinr)
 library(dplyr)
 library(cluster)
+library(readxl)
 
+#fa15 = read.fasta("solexaQA18thou_nucleotideGE10.fa")
+#fa15meta = read.table("solexaQA18thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
 fa15 = read.fasta("solexaQA15thou_nucleotideGE10.fa")
 fa15meta = read.table("solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
 
@@ -27,16 +30,20 @@ rownames(fa15) <- NULL
 fa15 = fa15 %>% left_join(fa15meta %>% select(md5, serogroup))
 
 #' Now compute the distances between these things
-fa15.dist = as.matrix(daisy(fa15[,1:284]))
+fa15.dist = as.matrix(daisy(fa15 %>% select(starts_with('X'))))
 rownames(fa15.dist) = fa15$serogroup
 colnames(fa15.dist) = fa15$serogroup
 
 #' Do some clustering for fun
 fa.hc1 <- hclust(as.dist(fa15.dist*284))
-plot(fa.hc1, cex=0.2)
+pdf("sero_tree1.pdf", width=12, height=8)
+plot(fa.hc1, cex=0.2, main="Serogroup clustering (method 1)", sub="", xlab="")
+dev.off()
 
 fa.hc2 <- hclust(as.dist(fa15.dist*284), method='average')
-plot(fa.hc2, cex=0.2)
+pdf("sero_tree2.pdf", width=12, height=8)
+plot(fa.hc2, cex=0.2, main="Serogroup clustering (method 2)", sub="", xlab="")
+dev.off()
 
 #' now, how can we add this up so we get differences between isolates?
 #'
@@ -49,6 +56,12 @@ plot(fa.hc2, cex=0.2)
 #' each of the serogroups (i.e. d = 1 on the diagonal, d < 1 off the diagonals).
 #' 
 #' We probably want proportions for the differences I guess, so we are normalised for the number of reads?
+#'
+#' First we want to grab the numbers...
+
+fa15d = fa15 %>% select(serogroup) %>% left_join(fa15meta) %>% select(serogroup, starts_with('X'))
+rownames(fa15d) = fa15d$serogroup
+fa15d = fa15d %>% select(starts_with('X')) %>% as.matrix
 
 samp_dist = matrix(NA, ncol(fa15d), ncol(fa15d))
 for (i in 1:ncol(fa15d)) {
@@ -65,7 +78,6 @@ rep    <- sub("X([0-9]+)_.*", "\\1", colnames(fa15d))
 rownames(samp_dist) = colnames(samp_dist) = paste0(animal, "_", rep)
 
 #' Read in metadata
-library(readxl)
 meta = read_excel("gnd_seqs_metadata.xlsx", sheet=2)
 
 samp.meta = data.frame(sample=substring(colnames(fa15d),2), stringsAsFactors = FALSE)
@@ -88,7 +100,11 @@ rownames(samp_dist) = colnames(samp_dist) = samp.meta$label
 
 # do some clustering
 samp.hc = hclust(as.dist(samp_dist))
-plot(samp.hc)
+pdf("sample_tree1.pdf", width=12, height=8)
+plot(samp.hc, main="Sample clustering (method 1)", xlab="", sub="", cex=0.7)
+dev.off()
 
 samp.hc2 = hclust(as.dist(samp_dist), method="average")
-plot(samp.hc2)
+pdf("sample_tree2.pdf", width=12, height=8)
+plot(samp.hc2, main="Sample clustering (method 2)", xlab="", sub="", cex=0.7)
+dev.off()
