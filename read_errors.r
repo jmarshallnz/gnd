@@ -125,9 +125,13 @@ heat_ma_map = function(mat) {
 }
 mat_row = mat[rows,]
 mat_red = mat_row[,colSums(mat_row) > 0]
+pdf("read_errors_maybe.pdf", width=12, height=10)
 heat_ma_map(mat_red)
+dev.off()
 
-cbind(sample = rownames(mat)[rows], probable_source = colnames(mat)[mat.source[rows]])
+
+mapping = cbind(sample = rownames(mat)[rows], probable_source = colnames(mat)[mat.source[rows]])
+write.csv(mapping, "read_errors.csv", row.names=FALSE)
 
 # Plot posteriors
 par(mfrow=c(2,2))
