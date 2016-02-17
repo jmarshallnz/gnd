@@ -38,6 +38,7 @@ fa15 = union(fa15_m, fa15_o)
 fa15.dist = as.matrix(daisy(fa15 %>% select(starts_with('X'))))
 rownames(fa15.dist) = fa15$serogroup
 colnames(fa15.dist) = fa15$serogroup
+write.csv(fa15.dist, "sero_dist15.csv", row.names=TRUE)
 
 #' Do some clustering for fun
 fa.hc1 <- hclust(as.dist(fa15.dist*284))
@@ -67,6 +68,7 @@ dev.off()
 fa15d = fa15 %>% select(serogroup) %>% left_join(fa15meta) %>% select(serogroup, starts_with('X'))
 rownames(fa15d) = fa15d$serogroup
 fa15d = fa15d %>% select(starts_with('X')) %>% as.matrix
+write.csv(data.frame(abundance= rowSums(fa15d)), "sero_abundance.csv", row.names=TRUE)
 
 samp_dist = matrix(NA, ncol(fa15d), ncol(fa15d))
 for (i in 1:ncol(fa15d)) {
