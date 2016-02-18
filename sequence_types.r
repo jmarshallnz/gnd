@@ -16,7 +16,7 @@ fa15 = read.fasta("15thou_403seqs.fas")
 fa15meta = read.table("solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
 
 #' Hmm, some of the names in the fasta file are O's...
-o_rows <- which(substring(fa_names, 1, 1) == "O")
+o_rows <- which(substring(names(fa15), 1, 1) == "O")
 
 # now label the fa15 by serotroup rather than MD5, and merge to give id/sequence dataframe
 fa_names <- substring(names(fa15),1,32)
