@@ -110,6 +110,10 @@ mat = apply(post_x,2:3,mean)
 rownames(mat) = colnames(mat) = rownames(d)
 mat = mat / rowSums(mat)
 
+conf = seq(0,1,length.out=100)
+num_conf = unlist(lapply(conf, function(x) { sum(diag(mat) <= x) }))
+plot(conf, num_conf, type="l")
+
 # filter out those that are different
 rows = diag(mat) < 0.5
 
