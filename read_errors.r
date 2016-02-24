@@ -38,15 +38,18 @@ d[2,4] = d[4,2] = 1
 
 #' The real sample
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
-y = read.csv("sero_abundance.csv", row.names=1)$abundance
+y = as.matrix(read.csv("sero_abundance.csv", row.names=1))
 
-n = length(y)
+#' TODO: y needs to be not the abundance across everything, rather the abundance per sample
+
+n_serogroups = nrow(y)
+n_samples    = ncol(y)
 K = max(d)
 
 #' Dirichlet prior on the unknown prevalences p
-prior_p = rep(0.00001, n)
+prior_p = matrix(0.00001, n_serogroups, n_samples)
 
-#' Beta prior on the error rate e
+#' Beta prior on the error rate e, constant for all libraries/lanes
 prior_e = c(1,1)
 
 #' MCMC control
@@ -56,15 +59,18 @@ thin   = 50
 
 #' Storage for the posteriors
 post_e = rep(NA, iters/thin)
-post_p = matrix(NA, iters/thin, n)
-post_x = array(NA, dim=c(iters/thin, n, n))
+post_p = array(NA, c(iters/thin, n_samples, n_serogroups))
+post_x = array(NA, dim=c(iters/thin, n_samples, n_serogroups, n_serogroups))
 
 #' Latent variables for the truth (assume our sample is truth to start)
-x = diag(y)
+x = array(NA, dim=c(n_samples, n_serogroups, n_serogroups))
+for (i in 1:n_samples) {
+  x[i,,] = diag(y[,i]) # TODO: hmm, the way around we have it might need some work...
+}
 
 #' Current values
 e = 0.01
-p = y / sum(y)
+p = y / colSums(y) # TODO hmm, I think we need Y around the other way for this?
 ed = (1-e)^(K-d) * e^d
 
 #' dirichlet function
@@ -76,46 +82,83 @@ rdirichlet<-function(n,a)
   x / as.vector(sm);
 }
 
+#' TODO: we're going to extend x to be per-library (i.e. per 96-cell sample)
+#'       and work out prob of error per genotype per cell (they may be correlated across samples, but let's ignore for now!)
+#'       
+#'       So, p needs to extend to be a matrix, and x to be an array
+#'       
 #' MCMC loop
 j = 1
 for (l in 1:(iters + burnin)) {
-  
+
   #' 1. Gibbs update x
-  for (i in 1:nrow(x)) {
-    #' x_{i.} = Multinomial(y_i, ...)
-    x[i,] = rmultinom(1, y[i], ed[i,]*p)
+  for (n in 1:n_samples) {
+    for (i in 1:n_serogroups) {
+      #' x_{i.} = Multinomial(y_i, ...)
+      x[n,i,] = rmultinom(1, y[i,n], ed[i,]*p[,n])
+    }
   }
 
   #' 2. Gibbs update p
-  p = rdirichlet(1, colSums(x) + prior_p)
+  for (n in 1:n_samples) {
+    p[,n] = rdirichlet(1, colSums(x[n,,]) + prior_p[,n])
+  }
 
   #' 3. Gibbs update e
-  e = rbeta(1, sum(d*x) + prior_e[1], sum((K-d)*x) + prior_e[2])
+  sdx = 0;
+  skdx = 0;
+  for (n in 1:n_samples) {
+    sdx = sdx + sum(d*x[n,,])
+    skdx = skdx + sum((K-d)*x[n,,])
+  }
+  e = rbeta(1, sdx + prior_e[1], skdx + prior_e[2])
   ed = (1-e)^(K-d) * e^d
 
   #' sample...
+  cat("Done iteration", l, "of", iters+burnin, "\n")
   if (l > burnin && (l-burnin) %% thin == 0) {
-    cat("Done iteration", l, "of", iters+burnin, "\n")
-    post_p[j,] = p
+    post_p[j,,] = p
     post_e[j] = e
     post_x[j,,] = x
     j = j + 1;
   }
 }
-apply(post_x,2:3,sum)
-apply(post_p,2,mean)*sum(y)
+#apply(post_x,2:3,sum)
+#apply(post_p,2,mean)*sum(y)
 mean(post_e)
 
-mat = apply(post_x,2:3,mean)
-rownames(mat) = colnames(mat) = rownames(d)
-mat = mat / rowSums(mat)
-
-conf = seq(0,1,length.out=100)
-num_conf = unlist(lapply(conf, function(x) { sum(diag(mat) <= x) }))
-plot(conf, num_conf, type="l")
+# work out which ones are likely errors (i.e. which ones have x switching all the time?)
+post_x_mean <- apply(post_x,2:4,mean)[1,,]
+rownames(post_x_mean) = colnames(post_x_mean) = rownames(d)
+post_x_mean = post_x_mean / rowSums(post_x_mean)
 
 # filter out those that are different
-rows = diag(mat) < 0.5
+rows = diag(post_x_mean) < 0.5
+
+conf = seq(0,1,length.out=100)
+num_conf = unlist(lapply(conf, function(x) { sum(diag(post_x_mean) <= x) }))
+plot(100*(1-conf), num_conf, type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
+hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
+
+# repeat this for each posterior iteration instead
+px = post_x[,1,,]
+
+conf = seq(0,1,length.out=100)
+count_errors = function(px, conf) {
+#  cat(dim(px))
+#  print(rowSums(px))
+  sum(diag(px/rowSums(px)) <= conf)
+}
+
+num_conf = lapply(conf, function(y) { apply(px, 1, count_errors, y) })
+num_conf = as.data.frame(num_conf)
+names(num_conf) <- 1:100
+plot_conf = apply(num_conf, 2, quantile, c(0.025, 0.5, 0.975))
+plot(100*(1-conf), plot_conf[2,], ylim=c(0,403), type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
+lines(100*(1-conf), plot_conf[1,], lty="dashed")
+lines(100*(1-conf), plot_conf[3,], lty="dashed")
+
+hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
 
 heat_ma_map = function(mat) {
   library(RColorBrewer)
@@ -127,15 +170,36 @@ heat_ma_map = function(mat) {
   mtext("Probable source", side=1, line=5)
   mtext("In sample", side=2, line=5)
 }
-mat_row = mat[rows,]
+mat_row = post_x_mean[rows,]
 mat_red = mat_row[,colSums(mat_row) > 0]
+
 pdf("read_errors_maybe.pdf", width=12, height=10)
 heat_ma_map(mat_red)
 dev.off()
 
+# most likely source
+most_likely_source <- colnames(mat_row)[apply(mat_row, 1, which.max)]
 
-mapping = cbind(sample = rownames(mat)[rows], probable_source = colnames(mat)[mat.source[rows]])
-write.csv(mapping, "read_errors.csv", row.names=FALSE)
+mapping = data.frame(sample = rownames(mat_row), probable_source = most_likely_source)
+
+map_source <- mapping %>% left_join(fa15 %>% select(-md5), by=c('sample' = 'serogroup'))
+map_dest   <- mapping %>% left_join(fa15 %>% select(-md5), by=c('probable_source' = 'serogroup'))
+
+# now check the difference between them and highlight it...
+diff = map_source[,-(1:2)] != map_dest[,-(1:2)]
+map_diff = cbind(map_source[,1:2], diff)
+
+map_diff = map_diff %>% arrange(probable_source)
+map_matrix = as.matrix(map_diff[,-(1:2)])
+# add in an alternating thingee
+map_matrix = map_matrix + 2*(as.numeric(map_diff[,2]) %% 2)
+colnames(map_matrix) = 1:284
+rownames(map_matrix) = map_diff[,1]
+par(mar=c(4,6,2,6))
+image(1:ncol(map_matrix), 1:nrow(map_matrix), t(map_matrix), col=c("white", "black", "grey80", "black"), xaxt="n", yaxt="n", xlab="", ylab="")
+axis(2, 1:nrow(map_matrix), rownames(map_matrix), las=2, cex.axis=0.8)
+axis(4, 1:nrow(map_matrix), map_diff[,2], las=2, cex.axis=0.8)
+
 
 # Plot posteriors
 par(mfrow=c(2,2))
