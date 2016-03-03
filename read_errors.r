@@ -160,13 +160,13 @@ iter_errors <- function(px_iter, sample) {
   count_errors = function(x, num) {
     r = numeric(num)
     r[as.numeric(names(x))] = unlist(x)
-    r = r/sum(r)
-    r[is.nan(r)] = 1
+#    r = r/sum(r)
+#    r[is.nan(r)] = 1
     r
   }
 
   px_iter_sum <- simplify2array(lapply(px_iter[[sample]], count_errors, length(px_iter[[sample]])))
-  diag(px_iter_sum)
+#  diag(px_iter_sum)
 }
 
 construct_matrix <- function(px_iter, sample) {
@@ -175,7 +175,7 @@ construct_matrix <- function(px_iter, sample) {
     r[as.numeric(names(x))] = unlist(x)
     r
   }
-  simplify2array(lapply(px_iter[[sample]], count_errors, length(px_iter[[sample]])))
+  simplify2array(lapply(px_iter[[sample]], construct_row, length(px_iter[[sample]])))
 }
 
 most_likely_source <- function(px_iter, sample) {
@@ -194,7 +194,9 @@ compute_error_quantiles <- function(post_x, sample, conf = seq(0,1,length.out=10
   samp_1 <- lapply(post_x, iter_errors, sample)
 
   quantile_errors <- function(samp, conf) {
-    quantile(unlist(lapply(samp, function(x, conf) { sum(x <= conf) }, conf)), c(0.025,0.5,0.975))
+    quantile(unlist(lapply(samp, function(x, conf) {
+      sum(diag(x) <= conf * rowSums(x))
+    }, conf)), c(0.025,0.5,0.975))
   }
 
   simplify2array(lapply(conf, function(y) { quantile_errors(samp_1, y)}))
@@ -234,7 +236,7 @@ plot_quantile_lines <- function(sample, post_x) {
   return(sample)
 }
 
-pdf("error_rates_by_cutoff_no_se.pdf", width=11, height=8)
+pdf("error_rates_by_cutoff_no_se2.pdf", width=11, height=8)
 sample = 1:96
 plot(NULL, ylim=c(0,403), xlim=c(0,100), type="n", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
 lapply(sample, plot_quantile_lines, post_x)
