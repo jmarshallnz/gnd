@@ -60,7 +60,15 @@ thin   = 50
 #' Storage for the posteriors
 post_e = rep(NA, iters/thin)
 post_p = array(NA, c(iters/thin, n_samples, n_serogroups))
-post_x = array(NA, dim=c(iters/thin, n_samples, n_serogroups, n_serogroups))
+
+# this has to be way smaller RAM-wise
+post_x = vector(mode='list', length=iters/thin)
+for (i in 1:length(post_x)) {
+  post_x[[i]] = vector(mode='list', length=n_samples)
+  for (j in 1:length(post_x[[i]])) {
+    post_x[[i]][[j]] = vector(mode='list', length=n_serogroups)
+  }
+}
 
 #' Latent variables for the truth (assume our sample is truth to start)
 x = array(NA, dim=c(n_samples, n_serogroups, n_serogroups))
@@ -119,13 +127,132 @@ for (l in 1:(iters + burnin)) {
   if (l > burnin && (l-burnin) %% thin == 0) {
     post_p[j,,] = p
     post_e[j] = e
-    post_x[j,,] = x
+    # to dump it out we need to replace x with the list(s)
+    for (i1 in 1:n_samples) {
+      for (i2 in 1:n_serogroups) {
+        num = x[i1, i2,]
+        wch = which(num > 0)
+        if (length(wch) > 0) {
+          vals  = num[wch]
+          names(vals) <- wch
+          post_x[[j]][[i1]][[i2]] = as.list(vals)
+        }
+      }
+    }
+    # hmm, really need to do something about the size of post_x here. It's too big
+    # for memory, but we ideally need it I think?
+    # I guess we could store it as a list of which ones are non-zero instead, as vast
+    # majority are zero...
     j = j + 1;
   }
 }
 #apply(post_x,2:3,sum)
 #apply(post_p,2,mean)*sum(y)
 mean(post_e)
+hist(post_e)
+
+# compute the error rate for each iteration of x
+
+px_iter = post_x[[1]]
+px_iter_sample = px_iter[[1]]
+
+iter_errors <- function(px_iter, sample) {
+  count_errors = function(x, num) {
+    r = numeric(num)
+    r[as.numeric(names(x))] = unlist(x)
+    r = r/sum(r)
+    r[is.nan(r)] = 1
+    r
+  }
+
+  px_iter_sum <- simplify2array(lapply(px_iter[[sample]], count_errors, length(px_iter[[sample]])))
+  diag(px_iter_sum)
+}
+
+construct_matrix <- function(px_iter, sample) {
+  construct_row = function(x, num) {
+    r = numeric(num)
+    r[as.numeric(names(x))] = unlist(x)
+    r
+  }
+  simplify2array(lapply(px_iter[[sample]], count_errors, length(px_iter[[sample]])))
+}
+
+most_likely_source <- function(px_iter, sample) {
+  count_errors = function(x, num) {
+    r = numeric(num)
+    r[as.numeric(names(x))] = unlist(x)
+    r
+  }
+  
+  px_iter_sum <- simplify2array(lapply(px_iter[[sample]], count_errors, length(px_iter[[sample]])))
+  apply(px_iter_sum,1,function(x) { if (sum(x) == 0) 0 else which.max(x) })
+}
+
+compute_error_quantiles <- function(post_x, sample, conf = seq(0,1,length.out=100)) {
+
+  samp_1 <- lapply(post_x, iter_errors, sample)
+
+  quantile_errors <- function(samp, conf) {
+    quantile(unlist(lapply(samp, function(x, conf) { sum(x <= conf) }, conf)), c(0.025,0.5,0.975))
+  }
+
+  simplify2array(lapply(conf, function(y) { quantile_errors(samp_1, y)}))
+}
+
+rows = matrix(NA, 403, 96)
+alt  = matrix(NA, 403, 96)
+for (i in 1:96) {
+  samp_1 <- simplify2array(lapply(post_x, construct_matrix, i))
+  samp_1_mean <- apply(samp_1, 1:2, mean)
+  # find most likely other
+  alt[,i] = apply(samp_1_mean, 1, which.max)
+  alt[rowSums(samp_1_mean) == 0,i] = NA
+  samp_1_mean <- samp_1_mean / rowSums(samp_1_mean)
+  rownames(samp_1_mean) = colnames(samp_1_mean) = rownames(d)
+  rows[,i] = diag(samp_1_mean) < 0.5
+  cat("Done", i, "of 96\n")
+}
+
+samp_1 <- simplify2array(lapply(post_x, most_likely_source, 3))
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+apply(samp_1, 1, Mode)
+
+rows = rowMeans(samp_1) < 0.5
+dim(samp_1[rows,])
+
+
+plot_quantile_lines <- function(sample, post_x) {
+  conf = seq(0,1,length.out=100)
+  num_conf = compute_error_quantiles(post_x, sample, conf)
+#  lines(100*(1-conf), num_conf[1,], lty="dashed", col=sample)
+  lines(100*(1-conf), num_conf[2,], col=sample)
+#  lines(100*(1-conf), num_conf[3,], lty="dashed", col=sample)
+  return(sample)
+}
+
+pdf("error_rates_by_cutoff_no_se.pdf", width=11, height=8)
+sample = 1:96
+plot(NULL, ylim=c(0,403), xlim=c(0,100), type="n", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
+lapply(sample, plot_quantile_lines, post_x)
+dev.off()
+
+
+count_errors = function(px, conf) {
+  #  cat(dim(px))
+  #  print(rowSums(px))
+  sum(diag(px/rowSums(px)) <= conf)
+}
+
+num_conf = lapply(conf, function(y) { apply(px, 1, count_errors, y) })
+num_conf = as.data.frame(num_conf)
+names(num_conf) <- 1:100
+plot_conf = apply(num_conf, 2, quantile, c(0.025, 0.5, 0.975))
+
+
 
 # work out which ones are likely errors (i.e. which ones have x switching all the time?)
 post_x_mean <- apply(post_x,2:4,mean)[1,,]
