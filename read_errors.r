@@ -38,7 +38,7 @@ d[2,4] = d[4,2] = 1
 
 #' The real sample
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
-y = read.csv("sero_abundance.csv", row.names=1)$abundance
+y = rowSums(read.csv("sero_abundance.csv", row.names=1))
 
 n = length(y)
 K = max(d)
@@ -47,12 +47,12 @@ K = max(d)
 prior_p = rep(0.00001, n)
 
 #' Beta prior on the error rate e
-prior_e = c(1,1)
+prior_e = c(40000,1000000)
 
 #' MCMC control
-iters  = 10000
+iters  = 50000
 burnin = 1000
-thin   = 50
+thin   = 100
 
 #' Storage for the posteriors
 post_e = rep(NA, iters/thin)
@@ -133,6 +133,7 @@ pdf("read_errors_maybe.pdf", width=12, height=10)
 heat_ma_map(mat_red)
 dev.off()
 
+mat.source = apply(mat, 1, which.max)
 
 mapping = cbind(sample = rownames(mat)[rows], probable_source = colnames(mat)[mat.source[rows]])
 write.csv(mapping, "read_errors.csv", row.names=FALSE)
