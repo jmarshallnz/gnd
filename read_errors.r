@@ -105,35 +105,81 @@ for (l in 1:(iters + burnin)) {
 apply(post_x,2:3,sum)
 apply(post_p,2,mean)*sum(y)
 mean(post_e)
+hist(post_e)
 
 mat = apply(post_x,2:3,mean)
 rownames(mat) = colnames(mat) = rownames(d)
 mat = mat / rowSums(mat)
 
-conf = seq(0,1,length.out=100)
-num_conf = unlist(lapply(conf, function(x) { sum(diag(mat) <= x) }))
-plot(conf, num_conf, type="l")
 
 # filter out those that are different
-rows = diag(mat) < 0.5
+rows = diag(post_x_mean) < 0.5
+
+conf = seq(0,1,length.out=100)
+num_conf = unlist(lapply(conf, function(x) { sum(diag(post_x_mean) <= x) }))
+plot(100*(1-conf), num_conf, type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
+hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
+
+# repeat this for each posterior iteration instead
+
+conf = seq(0,1,length.out=100)
+count_errors = function(px, conf) {
+#  cat(dim(px))
+#  print(rowSums(px))
+  sum(diag(px/rowSums(px)) <= conf)
+  cat("counting errors for confidence", conf, "\n")
+}
+
+num_conf = lapply(conf, function(y) { apply(post_x, 1, count_errors, y) })
+num_conf = as.data.frame(num_conf)
+names(num_conf) <- 1:100
+pdf("error_rates_by_cutoff.pdf", width=8, height=6)
+plot_conf = apply(num_conf, 2, quantile, c(0.025, 0.5, 0.975))
+plot(100*(1-conf), plot_conf[2,], ylim=c(0,403), type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
+lines(100*(1-conf), plot_conf[1,], lty="dashed")
+lines(100*(1-conf), plot_conf[3,], lty="dashed")
+
+hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
 
 heat_ma_map = function(mat) {
   library(RColorBrewer)
   pal = brewer.pal(9, "YlGnBu")
   par(mar = c(6,6,2,2))
-  image(1:ncol(mat), 1:nrow(mat), t(mat), col=pal, xaxt="n", yaxt="n", xlab="", ylab="")
-  axis(1, 1:ncol(mat), colnames(mat), las=2, cex.axis=0.8)
-  axis(2, 1:nrow(mat), rownames(mat), las=2, cex.axis=0.8)
-  mtext("Probable source", side=1, line=5)
-  mtext("In sample", side=2, line=5)
+  image(1:nrow(mat), 1:ncol(mat), mat, col=pal, xaxt="n", yaxt="n", xlab="", ylab="")
+  axis(1, 1:nrow(mat), rownames(mat), las=2, cex.axis=0.8)
+  axis(2, 1:ncol(mat), colnames(mat), las=2, cex.axis=0.8)
+  mtext("Probable source", side=2, line=5)
+  mtext("In sample", side=1, line=5)
 }
-mat_row = mat[rows,]
-mat_red = mat_row[,colSums(mat_row) > 0]
+mat_row = post_x_mean[rows,]
+mat_red = mat_row[,colSums(mat_row) > 0.5]
+
 pdf("read_errors_maybe.pdf", width=12, height=10)
 heat_ma_map(mat_red)
 dev.off()
 
-mat.source = apply(mat, 1, which.max)
+# most likely source
+most_likely_source <- colnames(mat_row)[apply(mat_row, 1, which.max)]
+
+mapping = data.frame(sample = rownames(mat_row), probable_source = most_likely_source)
+
+map_source <- mapping %>% left_join(fa15 %>% select(-md5), by=c('sample' = 'serogroup'))
+map_dest   <- mapping %>% left_join(fa15 %>% select(-md5), by=c('probable_source' = 'serogroup'))
+
+# now check the difference between them and highlight it...
+diff = map_source[,-(1:2)] != map_dest[,-(1:2)]
+map_diff = cbind(map_source[,1:2], diff)
+
+map_diff = map_diff %>% arrange(probable_source)
+map_matrix = as.matrix(map_diff[,-(1:2)])
+# add in an alternating thingee
+map_matrix = map_matrix + 2*(as.numeric(map_diff[,2]) %% 2)
+colnames(map_matrix) = 1:284
+rownames(map_matrix) = map_diff[,1]
+par(mar=c(4,6,2,6))
+image(1:ncol(map_matrix), 1:nrow(map_matrix), t(map_matrix), col=c("white", "black", "grey80", "black"), xaxt="n", yaxt="n", xlab="", ylab="")
+axis(2, 1:nrow(map_matrix), rownames(map_matrix), las=2, cex.axis=0.8)
+axis(4, 1:nrow(map_matrix), map_diff[,2], las=2, cex.axis=0.8)
 
 mapping = cbind(sample = rownames(mat)[rows], probable_source = colnames(mat)[mat.source[rows]])
 write.csv(mapping, "read_errors.csv", row.names=FALSE)
