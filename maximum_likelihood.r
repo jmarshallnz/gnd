@@ -94,14 +94,27 @@
 #'      so then rowsum would be greater than 1?
 #'      I think it would be biasing to error?
 #'
+#'
+get_error_matrix <- function(e, d) {
+  #' Let's assume error rate is e and that K independent errors
+  #' arise at rate e^K. Note that 1 error is not (1-e)^{K-1}e
+  #' as it would be in the binomial context. We can't do that as
+  #' we just don't have that context. We have observed only a tiny
+  #' fraction of the potential errors.
+  E = e^d
+  #' Now we fix it up by making the diagonal entries (no error)
+  #' 1 - the other errors
+  diag(E) = 2 - rowSums(E)
+  E
+}
+
 max_lik_est_improved <- function(e, d, y) {
-  E = (1-e)^(max(d)-d)*e^d
-  Ehat = t(t(E) / colSums(E)) #' This is not really right though, right??
+  E = get_error_matrix(e, d)
   #' equiv to Ehat = E / colSums(E)
 #  Ehat = (E + rowSums(E) - 1)
 #  q = y/sum(y) - (1 - rowSums(E))
   q = y/sum(y)
-  p = solve(Ehat) %*% q
+  p = solve(E) %*% q
   p
 }
 
@@ -131,3 +144,7 @@ neg_prev = simplify2array(lapply(e, non_pos_prev, d, y))[,1,]
 p_hat = simplify2array(lapply(e, max_lik_est_improved, d, y))[,1,]
 colnames(neg_prev) <- e
 plot(e, nrow(neg_prev) - colSums(neg_prev), type="l", xlab="Error rate", ylab="Number of serogroups with p>0")
+
+pdf("max_likelihood_types_unlikely_to_be_true.pdf", width=25, height=5)
+barplot(sort(rowSums(neg_prev)), las=2, cex.names=0.4)
+dev.off()
