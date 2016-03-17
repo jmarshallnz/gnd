@@ -92,3 +92,24 @@ perm_diss_red = rbind(perm_diss_red, as.character(samp.meta[!wch,]$source))
 perm_diss_red = rbind(perm_diss_red, as.character(samp.meta[!wch,]$animal))
 rownames(perm_diss_red)[nrow(perm_diss_red) - 1:3 + 1] = c("Animal", "Source", "Treatment")
 write.csv(perm_diss_red, "sample_permanova_no_ctrl_reduced.csv")
+
+library(MASS)
+mds <- monoMDS(abund_dist,k=2)
+
+x <- mds$points[,1]
+y <- mds$points[,2]
+#z <- mds$points[,3]
+
+library(RColorBrewer)
+plot(x, y, main="MDS plot for MLST", type="n")
+text(x,y,labels=mlst2$ST, col=as.numeric(mlst2$Group))
+#pdf("mds.pdf", width=5, height=4)
+#ar(pin=c(5,4), omi=rep(0,4))
+pdf("mds.pdf", width=10, height=8)
+cols = c(brewer.pal(8, "Set2"), brewer.pal(8, "Dark2"), brewer.pal(8, "Accent"))
+plot(x, y, main="", xlim=c(-2,3), ylim=c(-2,2), type="n", xlab="", ylab="", xaxt="n", yaxt="n")
+points(x,y,col=cols[as.factor(samp.meta$animal)], pch = 16+as.numeric(as.factor(samp.meta$source)))
+legend("topright", legend=levels(as.factor(samp.meta$animal)), pch=19, col=cols, cex=0.8)
+legend("topleft", legend=levels(as.factor(samp.meta$source)), pch=16+1:4, col=cols[24], cex=0.8)
+#legend(2, 2, legend=c("chicken", "cow", "sheep", "water"), fill=1:4)
+dev.off()
