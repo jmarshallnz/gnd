@@ -1,0 +1,41 @@
+---
+title: "Inconsistencies between methods"
+author: "JM"
+output: pdf_document
+---
+
+```{r, echo=FALSE, message=FALSE} 
+library(knitr)
+library(dplyr)
+mapping = read.csv("inconsistent_methods.csv")
+```
+
+### Serogroups that JM has that PB doesn't
+
+The following are those that JM has that PB doesn't have
+
+```{r, comment=''}
+mapping %>% filter(jm & !pb) %>% select(-jm, -pb) %>% arrange(-abundance) %>% kable
+```
+
+By the looks the reason they're still legitimate is due to:
+
+1. PB got it wrong (it seems the cluster names might not be right?)
+2. They're high abundance (so unlikely to be errors)
+3. They're low abundance, and the closest serogroup is not very abundant.
+
+### Serogroups that PB has that JM doesn't
+
+The following are those that PB has that JM hasn't
+
+```{r, comment=''}
+mapping %>% filter(pb & !jm) %>% select(-jm, -pb) %>% arrange(-abundance) %>% kable
+```
+
+These are universally low abundance, and close to a serogroup with high abundance.
+
+### All serogroups
+
+```{r, comment=''}
+mapping %>% arrange(-abundance) %>% kable
+```
