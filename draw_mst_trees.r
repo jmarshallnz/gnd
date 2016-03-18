@@ -35,9 +35,9 @@ highlight_removed <- function(tree, vertices_to_remain, col = "orange", highligh
   ind_dont_want = indices_to_remove(tree, vertices_to_remain)
 
   # right, now highlight these
-  col = rep(col, length(V(d.mst)))
-  vsize = V(d.mst)$size
-  vsize[ind_dont_want] = 1
+  col = rep(col, length(V(tree)))
+  vsize = V(tree)$size
+  vsize[ind_dont_want] = pmax(1, vsize[ind_dont_want])
   col[ind_dont_want] = "red"
   tree.high = set_vertex_attr(tree, "size", value=vsize)
   tree.high = set_vertex_attr(tree.high, "color", value=col)
@@ -54,7 +54,7 @@ reduce_tree <- function(tree, vertices_to_remain) {
   # If we have no leaves, we remove the node with smallest degree by replacing
   # the subgraph formed by the complete graph on it's neighbours, weighted by
   # shortest path length, with it's MST.
-  to_remove = vertex_names[ind_dont_want]
+  to_remove = V(tree)$name[ind_dont_want]
   tree.red = tree
   while(length(to_remove) > 0) {
     degree = unlist(lapply(to_remove, function(x, g) { length(incident(g, x)) }, tree.red))
@@ -82,7 +82,7 @@ reduce_tree <- function(tree, vertices_to_remain) {
       }
       # ok, now we want to replace this graph with it's MST
       sub.mst = mst(sub)
-
+      V(tree)$name
       # now add the edges from that MST subtree to our tree and remove the original vertex
       tree.red = add_edges(tree.red, t(ends(sub.mst, E(sub.mst))), attr=list(weight = E(sub.mst)$weight))
       tree.red = delete_vertices(tree.red, to_remove[remove_now])
@@ -106,4 +106,22 @@ plot(d.mst.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.c
 dev.off()
 
 #' read in Patricks dataset
-read.csv("")
+patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
+
+# need to scale it, annoyingly...
+read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
+patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
+y.patrick = rowSums(patrick)
+
+d.mst.patrick.high <- highlight_removed(d.mst, names(y.patrick))
+pdf("tree_full_highlight_patrick.pdf", width=20, height=20)
+plot(d.mst.patrick.high, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
+dev.off()
+
+d.mst.patrick.red = reduce_tree(d.mst, names(y.patrick))
+pdf("tree_simplified_patrick.pdf", width=20, height=20)
+layout.red.patrick = layout[match(V(d.mst.patrick.red)$name, V(d.mst)$name),]
+scale.y.patrick.red = scale_abund(y.patrick)
+V(d.mst.patrick.red)[names(y.patrick)]$size <- scale.y.patrick.red
+plot(d.mst.patrick.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout.red.patrick)
+dev.off()
