@@ -106,12 +106,12 @@ plot(d.mst.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.c
 dev.off()
 
 #' read in Patricks dataset
-patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
+# patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
 
 # need to scale it, annoyingly...
-read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
-patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
-y.patrick = rowSums(patrick)
+#read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
+#patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
+y.patrick = rowSums(read.csv("patrick_cdhit_abundance.csv", row.names=1))
 
 d.mst.patrick.high <- highlight_removed(d.mst, names(y.patrick))
 pdf("tree_full_highlight_patrick.pdf", width=20, height=20)

@@ -3,14 +3,9 @@
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
 y.all = rowSums(read.csv("sero_abundance.csv", row.names=1))
 y.jm = rowSums(read.csv("no_error_abundance.csv", row.names=1))
+y.pb = rowSums(read.csv("patrick_cdhit_abundance.csv", row.names=1))
 
 diag(d) <- Inf
-
-# need to scale patrick's data
-patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
-read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
-patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
-y.pb = rowSums(patrick)
 
 # right, now create some summaries of the differences between them
 
@@ -45,16 +40,11 @@ mapping = data.frame(serogroup = names(y.all),
 rownames(mapping) = NULL
 write.csv(mapping, "inconsistent_methods.csv", row.names=FALSE)
 
-#' now compare abundances for the samples. This is a bit silly to be honest, as there's still quite a lot of overlap
-#' between the two methods
+#' now compare abundances for the samples.
 
 y.all = read.csv("sero_abundance.csv", row.names=1)
 y.jm = read.csv("no_error_abundance.csv", row.names=1)
-
-patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
-read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
-patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
-y.pb = patrick
+y.pb = read.csv("patrick_cdhit_abundance.csv", row.names=1)
 
 # make y.jm and y.pb into the joint size we need
 serogroups = union(rownames(y.pb), rownames(y.jm))

@@ -20,9 +20,9 @@ mapping %>% filter(jm & !pb) %>% select(-jm, -pb) %>% arrange(-abundance) %>% ka
 
 By the looks the reason they're still legitimate is due to:
 
-1. PB got it wrong (it seems the cluster names might not be right?)
-2. They're high abundance (so unlikely to be errors)
-3. They're low abundance, and the closest serogroup is not very abundant.
+1. They're high abundance (so unlikely to be errors)
+2. They're low abundance, and the closest serogroup is not abundant enough to produce this
+many errors (given the estimated error rate).
 
 ### Serogroups that PB has that JM doesn't
 
