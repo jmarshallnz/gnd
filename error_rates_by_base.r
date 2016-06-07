@@ -24,6 +24,7 @@ dev.off()
 
 # purity computation
 impurity <- function(x) {
+  # TODO: Change to shannons entropy perhaps?
   p = prop.table(table(x))
   1 - sum(p^2)
 }
