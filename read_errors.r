@@ -201,6 +201,18 @@ axis(2, 1:nrow(map_matrix), rownames(map_matrix), las=2, cex.axis=0.6)
 axis(4, 1:nrow(map_matrix), map_diff[,2], las=2, cex.axis=0.6)
 dev.off()
 
+# purity computation
+impurity <- function(x) {
+  p = prop.table(table(x))
+  1 - sum(p^2)
+}
+# need to compute purity based on those that aren't errors
+no_error_serogroups <- fa15 %>% filter(!(serogroup %in% map_diff$sample))
+error_rates_by_base <- data.frame(errors = colSums(map_diff[,-c(1:2)]), impurity = apply(no_error_serogroups[,1:284], 2, impurity), triple=c(rep(letters[1:3],284/3),letters[1:2]))
+plot(jitter(errors) ~ jitter(impurity, factor=20), col=triple, data=error_rates_by_base)
+
+write.csv(error_rates_by_base, "error_rates_by_base.csv", row.names=FALSE)
+
 mapping = data.frame(sample = rownames(mat), probable_source = colnames(mat)[mat.source])
 write.csv(mapping, "read_errors.csv", row.names=FALSE)
 
