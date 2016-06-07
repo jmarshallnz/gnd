@@ -107,11 +107,11 @@ rownames(samp_dist) = colnames(samp_dist) = samp.meta$label
 
 # do some clustering
 samp.hc = hclust(as.dist(samp_dist))
-pdf("sample_tree1.pdf", width=12, height=8)
-plot(samp.hc, main="Sample clustering (method 1)", xlab="", sub="", cex=0.7)
+pdf("sample_tree1_dodgy_jm_method.pdf", width=12, height=8)
+plot(samp.hc, main="Sample clustering (Dodgy JM method 1)", xlab="", sub="", cex=0.7)
 dev.off()
 
 samp.hc2 = hclust(as.dist(samp_dist), method="average")
-pdf("sample_tree2.pdf", width=12, height=8)
-plot(samp.hc2, main="Sample clustering (method 2)", xlab="", sub="", cex=0.7)
+pdf("sample_tree2_dodgy_jm_method.pdf", width=12, height=8)
+plot(samp.hc2, main="Sample clustering (Dodgy JM method 2)", xlab="", sub="", cex=0.7)
 dev.off()
