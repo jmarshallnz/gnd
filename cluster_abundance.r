@@ -1,7 +1,7 @@
 library(readxl)
 library(dplyr)
 
-abund_samp = read.csv("no_error_abundance.csv", row.names=1)
+abund_samp = read.csv("no_error_abundance_with_ctrl.csv", row.names=1)
 abund_samp = t(abund_samp)
 abund_per_sample = abund_samp / rowSums(abund_samp)
 abund_dist = as.matrix(dist(abund_per_sample))
@@ -66,33 +66,7 @@ plot(div.shannon, div.shannon.all, xlab="Shannon diversity (corrected)", ylab="S
 abline(0,1)
 dev.off()
 
-#' filter out the ctrls
-wch <- samp.meta$animal == "ctrl"
-
-#' add the metadata to the distance for PERMANOVA
-perm_diss = abund_dist[!wch, !wch]
-perm_diss = rbind(perm_diss, "")
-perm_diss = rbind(perm_diss, as.character(samp.meta[!wch,]$treatment))
-perm_diss = rbind(perm_diss, as.character(samp.meta[!wch,]$source))
-perm_diss = rbind(perm_diss, as.character(samp.meta[!wch,]$animal))
-rownames(perm_diss)[nrow(perm_diss) - 1:3 + 1] = c("Animal", "Source", "Treatment")
-write.csv(perm_diss, "sample_permanova_no_ctrl.csv")
-
-write.csv(samp.meta[-wch,], "sample_metadata_no_ctrl.csv", row.names=FALSE)
-write.csv(abund_dist[-wch,-wch], "sample_distance_no_ctrl.csv", row.names=TRUE)
-
-#' filter out ctrls and those less than 200 abundance...
-wch = samp.meta$animal == "ctrl"
-wch = wch | rowSums(abund_samp) < 200
-
-perm_diss_red = abund_dist[!wch, !wch]
-perm_diss_red = rbind(perm_diss_red, "")
-perm_diss_red = rbind(perm_diss_red, as.character(samp.meta[!wch,]$treatment))
-perm_diss_red = rbind(perm_diss_red, as.character(samp.meta[!wch,]$source))
-perm_diss_red = rbind(perm_diss_red, as.character(samp.meta[!wch,]$animal))
-rownames(perm_diss_red)[nrow(perm_diss_red) - 1:3 + 1] = c("Animal", "Source", "Treatment")
-write.csv(perm_diss_red, "sample_permanova_no_ctrl_reduced.csv")
-
+#' MDS below here by the looks
 library(MASS)
 set.seed(5)
 mds <- monoMDS(abund_dist,k=2)
