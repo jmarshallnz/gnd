@@ -240,27 +240,3 @@ abund_dist = dist(abund_per_sample)
 
 abund.hc1 = hclust(abund_dist, method='complete')
 plot(abund.hc1)
-
-# Plot posteriors
-par(mfrow=c(2,2))
-plot(post_p[,1], type="l", ylim=c(0,1), main="Abundance traces")
-for (i in 2:n)
-  lines(post_p[,i], col=i)
-d <- list(); xlim = NULL; ylim = NULL
-for (i in 1:n) {
-  d[[i]] <- density(post_p[,i])
-  if (d[[i]]$bw < 0.001)
-    d[[i]] <- density(post_p[,i], bw=0.001)
-  xlim = range(xlim, d[[i]]$x)
-  ylim = range(ylim, d[[i]]$y)
-}
-plot(d[[1]], ylim=ylim, xlim=xlim, main="Abundance density")
-for (i in 2:n) {
-  lines(d[[i]], col=i)
-  # and the marginal prior
-  x = seq(xlim[1], xlim[2], length.out=100)
-  y = dbeta(x, prior_p[i], sum(prior_p) - prior_p[i]) * nrow(post_p)
-  lines(x, y, col=i, lty="dotted")
-}
-plot(post_e, type="l", main="Error rate traces")
-plot(density(post_e), main="Error rate density")
