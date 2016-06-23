@@ -134,9 +134,9 @@ post_x_means = post_x_means / rowSums(post_x_means)
 rows = diag(post_x_means) < 0.5
 
 conf = seq(0,1,length.out=100)
-num_conf = unlist(lapply(conf, function(x) { sum(diag(post_x_mean) <= x) }))
+num_conf = unlist(lapply(conf, function(x) { sum(diag(post_x_means) <= x) }))
 plot(100*(1-conf), num_conf, type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
-hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
+hist(100*diag(post_x_means), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
 
 # repeat this for each posterior iteration instead
 
@@ -151,14 +151,12 @@ count_errors = function(px, conf) {
 num_conf = lapply(conf, function(y) { apply(post_x, 1, count_errors, y) })
 num_conf = as.data.frame(num_conf)
 names(num_conf) <- 1:100
-pdf("error_rates_by_cutoff.pdf", width=8, height=6)
+pdf(paste0("error_rates_by_cutoff", appendix, ".pdf"), width=8, height=6)
 plot_conf = apply(num_conf, 2, quantile, c(0.025, 0.5, 0.975))
 plot(100*(1-conf), plot_conf[2,], ylim=c(0,403), type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
 lines(100*(1-conf), plot_conf[1,], lty="dashed")
 lines(100*(1-conf), plot_conf[3,], lty="dashed")
 dev.off()
-
-hist(100*diag(post_x_mean), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
 
 heat_ma_map = function(mat) {
   library(RColorBrewer)
@@ -173,7 +171,7 @@ heat_ma_map = function(mat) {
 mat_row = post_x_means[rows,]
 mat_red = mat_row[,colSums(mat_row) > 0.5]
 
-pdf("read_errors_maybe.pdf", width=24, height=5)
+pdf(paste0("read_errors_maybe", appendix, ".pdf"), width=24, height=5)
 heat_ma_map(mat_red)
 dev.off()
 
@@ -181,7 +179,12 @@ dev.off()
 most_likely_source <- colnames(mat_row)[apply(mat_row, 1, which.max)]
 
 mapping = data.frame(sample = rownames(mat_row), probable_source = most_likely_source)
-write.csv(mapping, "error_mapping.csv", row.names=FALSE)
+write.csv(mapping, paste0("error_mapping", appendix, ".csv"), row.names=FALSE)
+
+
+mapping = read.csv(paste0("error_mapping", appendix, ".csv"))
+
+fa15 <- read_fasta()
 
 #' compute difference maps and higlight them
 map_source <- mapping %>% left_join(fa15 %>% select(-md5), by=c('sample' = 'serogroup'))
@@ -197,7 +200,7 @@ map_matrix = as.matrix(map_diff[,-(1:2)])
 map_matrix = map_matrix + 2*(as.numeric(map_diff[,2]) %% 2)
 colnames(map_matrix) = 1:284
 rownames(map_matrix) = map_diff[,1]
-pdf("error_maps_by_base_pairs.pdf", width=10, height=20)
+pdf(paste0("error_maps_by_base_pairs", appendix, ".pdf"), width=10, height=20)
 par(mar=c(4,6,2,6))
 image(1:ncol(map_matrix), 1:nrow(map_matrix), t(map_matrix), col=c("white", "black", "grey80", "black"), xaxt="n", yaxt="n", xlab="", ylab="")
 axis(2, 1:nrow(map_matrix), rownames(map_matrix), las=2, cex.axis=0.6)
@@ -214,20 +217,22 @@ no_error_serogroups <- fa15 %>% filter(!(serogroup %in% map_diff$sample))
 error_rates_by_base <- data.frame(errors = colSums(map_diff[,-c(1:2)]), impurity = apply(no_error_serogroups[,1:284], 2, impurity), triple=c(rep(letters[1:3],284/3),letters[1:2]))
 plot(jitter(errors) ~ jitter(impurity, factor=20), col=triple, data=error_rates_by_base)
 
-write.csv(error_rates_by_base, "error_rates_by_base.csv", row.names=FALSE)
+write.csv(error_rates_by_base, paste0("error_rates_by_base", appendix, ".csv"), row.names=FALSE)
 
-mapping = data.frame(sample = rownames(mat), probable_source = colnames(mat)[mat.source])
-write.csv(mapping, "read_errors.csv", row.names=FALSE)
+# now compute the true abundances. This is standalone
 
-# now compute the true abundances
-abundance = read.csv("sero_abundance.csv", row.names = 1)
+abundance = read_abundance(removed=c(97,98,120))
 abundance$serogroup = rownames(abundance)
 
-new_abund = abundance %>% left_join(mapping, by = c("serogroup" = "sample"))
+mapping = read.csv(paste0("error_mapping", appendix, ".csv"), stringsAsFactors = FALSE)
 
-new_abund2 = apply(new_abund[,1:96], 2, function(x) { tapply(x, new_abund$probable_source, sum) })
+new_abund = abundance %>%
+  left_join(mapping, by = c("serogroup" = "sample")) %>%
+  mutate(probable_source = factor(ifelse(is.na(probable_source), serogroup, probable_source)))
+
+new_abund2 = apply(new_abund %>% select(-serogroup, -probable_source), 2, function(x) { tapply(x, new_abund$probable_source, sum) })
 new_abund2 = data.frame(serogroup = levels(new_abund$probable_source), new_abund2)
-write.csv(new_abund2, "no_error_abundance.csv", row.names=FALSE)
+write.csv(new_abund2, paste0("no_error_abundance", appendix, ".csv"), row.names=FALSE)
 
 # do some clustering for fun
 abund_per_sample = t(new_abund2[,-1]) / colSums(new_abund2[,-1])
