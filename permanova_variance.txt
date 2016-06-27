@@ -1,0 +1,5 @@
+Source	  Estimate	   Sq.root
+S(Tr)	-1.5278E-3	-3.9087E-2
+S(So)	 3.9858E-3	 6.3133E-2
+V(An(Tr))	   0.27036	   0.51996
+V(Res)	 5.8799E-2	   0.24249
