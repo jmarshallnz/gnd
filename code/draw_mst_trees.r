@@ -1,10 +1,15 @@
-# tree stuff
-d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
-y = rowSums(read.csv("sero_abundance.csv", row.names=1))
-y.red = rowSums(read.csv("no_error_abundance.csv", row.names=1))
+#' Code for drawing igraph trees
 
 library(igraph)
+source("code/read_abundance.R")
 
+#' Read in the data
+y = rowSums(read_abundance())
+y.red = rowSums(read.csv("no_error_abundance.csv", row.names=1))
+d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
+
+#' Function to scale the abundances by so that the node size isn't
+#' too giant
 scale_abund <- function(x) {
   x^(1/3)/10
 }
@@ -19,7 +24,7 @@ V(d.mst)$label = substring(V(d.mst)$name, pmax(nchar(V(d.mst)$name) - 4, 0))
 V(d.mst)$label[V(d.mst)$size < 1.5] = NA
 
 layout = layout_nicely(d.mst)
-pdf("tree_full.pdf", width=20, height=20)
+pdf("figures/tree_full.pdf", width=20, height=20)
 plot(d.mst, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
@@ -93,12 +98,12 @@ reduce_tree <- function(tree, vertices_to_remain) {
 }
 
 d.mst.high <- highlight_removed(d.mst, names(y.red))
-pdf("tree_full_highlight.pdf", width=20, height=20)
+pdf("figures/tree_full_highlight.pdf", width=20, height=20)
 plot(d.mst.high, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
 d.mst.red = reduce_tree(d.mst, names(y.red))
-pdf("tree_simplified.pdf", width=20, height=20)
+pdf("figures/tree_simplified.pdf", width=20, height=20)
 layout.red = layout[match(V(d.mst.red)$name, V(d.mst)$name),]
 scale.y.red = scale_abund(y.red)
 V(d.mst.red)[names(y.red)]$size <- scale.y.red
@@ -106,20 +111,15 @@ plot(d.mst.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.c
 dev.off()
 
 #' read in Patricks dataset
-# patrick = read.table("Patrick_Proportions_15thou.txt", header=TRUE, row.names=1)
-
-# need to scale it, annoyingly...
-#read_counts = colSums(read.csv("sero_abundance.csv", row.names=1))
-#patrick = sweep(patrick, 2, read_counts/colSums(patrick), '*')
 y.patrick = rowSums(read.csv("patrick_cdhit_abundance.csv", row.names=1))
 
 d.mst.patrick.high <- highlight_removed(d.mst, names(y.patrick))
-pdf("tree_full_highlight_patrick.pdf", width=20, height=20)
+pdf("figures/tree_full_highlight_patrick.pdf", width=20, height=20)
 plot(d.mst.patrick.high, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
 d.mst.patrick.red = reduce_tree(d.mst, names(y.patrick))
-pdf("tree_simplified_patrick.pdf", width=20, height=20)
+pdf("figures/tree_simplified_patrick.pdf", width=20, height=20)
 layout.red.patrick = layout[match(V(d.mst.patrick.red)$name, V(d.mst)$name),]
 scale.y.patrick.red = scale_abund(y.patrick)
 V(d.mst.patrick.red)[names(y.patrick)]$size <- scale.y.patrick.red
