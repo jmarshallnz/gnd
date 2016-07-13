@@ -45,27 +45,6 @@ pdf("sample_tree2.pdf", width=12, height=8)
 plot(samp.hc2, main="Sample clustering (method 2)", xlab="", sub="", cex=0.7)
 dev.off()
 
-# some diversity stuff
-library(vegan)
-
-div.simpson = vegan::diversity(abund_samp, "simpson")
-div.shannon = vegan::diversity(abund_samp, "shannon")
-
-# now re-run on all the data instead
-abund_all = read.csv("sero_abundance.csv", row.names=1)
-abund_all = t(abund_all)
-div.simpson.all = vegan::diversity(abund_all, "simpson")
-div.shannon.all = vegan::diversity(abund_all, "shannon")
-pdf("simpson.pdf", width=6, height=6)
-plot(div.simpson, div.simpson.all, xlab="Simpson diversity (corrected)", ylab="Simpson diversity (all)")
-abline(0,1)
-dev.off()
-
-pdf("shannon.pdf", width=6, height=6)
-plot(div.shannon, div.shannon.all, xlab="Shannon diversity (corrected)", ylab="Shannon diversity (all)")
-abline(0,1)
-dev.off()
-
 #' MDS below here by the looks
 library(MASS)
 set.seed(5)
