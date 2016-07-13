@@ -1,10 +1,13 @@
 # script for comparing original data between methods
+source("code/read_abundance.R")
+
+y.all = read_abundance()
+y.jm = rowSums(read.csv("no_error_abundance.csv", row.names=1)[,names(y.all)])
+y.pb = rowSums(read.csv("temp/patrick_cdhit_abundance.csv", row.names=1)[,names(y.all)])
+y.all = rowSums(y.all)
 
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
-y.all = rowSums(read.csv("sero_abundance.csv", row.names=1))
-y.jm = rowSums(read.csv("no_error_abundance.csv", row.names=1))
-y.pb = rowSums(read.csv("patrick_cdhit_abundance.csv", row.names=1))
-
+d = d[names(y.all), names(y.all)]
 diag(d) <- Inf
 
 # right, now create some summaries of the differences between them
@@ -38,13 +41,13 @@ mapping = data.frame(serogroup = names(y.all),
                      close_abund = y.all[close_abund],
                      close_dist = d[cbind(names(y.all), close_abund)], jm = names(y.all) %in% names(y.jm), pb = names(y.all) %in% names(y.pb))
 rownames(mapping) = NULL
-write.csv(mapping, "inconsistent_methods.csv", row.names=FALSE)
+write.csv(mapping, "temp/inconsistent_methods.csv", row.names=FALSE)
 
 #' now compare abundances for the samples.
 
-y.all = read.csv("sero_abundance.csv", row.names=1)
-y.jm = read.csv("no_error_abundance.csv", row.names=1)
-y.pb = read.csv("patrick_cdhit_abundance.csv", row.names=1)
+y.all = read_abundance()
+y.jm = read.csv("no_error_abundance.csv", row.names=1)[,names(y.all)]
+y.pb = read.csv("patrick_cdhit_abundance.csv", row.names=1)[,names(y.all)]
 
 # make y.jm and y.pb into the joint size we need
 serogroups = union(rownames(y.pb), rownames(y.jm))
@@ -66,28 +69,15 @@ barplot(prop.pb)
 # now figure out all the animal names (yay, this again...)
 
 #' Read in metadata
-meta = read_excel("gnd_seqs_metadata.xlsx", sheet=2)
+source("code/read_metadata.R")
 
-samp.meta = data.frame(sample=substring(colnames(y.all),2), stringsAsFactors = FALSE)
-
-samp.meta = samp.meta %>% left_join(meta, by=c('sample'='Library Name')) %>% dplyr::select(sample, treatment=Treatment, source=`Description [Optional] `)
-samp.meta$treatment = factor(samp.meta$treatment)
-levels(samp.meta$treatment) = c("bf", "ct")
-samp.meta$source = factor(samp.meta$source)
-levels(samp.meta$source) = c("fec", "pob", "por", "pre")
-samp.meta = samp.meta %>% mutate(animal = sub(".*_([0-9ctrl]+)_.*", "\\1", sample),
-                                 label = paste0(animal, "_", treatment, "_", source))
-
-# relabel the ctrls
-wch <- samp.meta$animal == "ctrl"
-ctrl_labs = sub("([0-9ctrl]+)_.*", "\\1", samp.meta$sample)
-samp.meta$label[wch] <- paste0("ctrl_", ctrl_labs[wch])
+labels <- read_metadata(animal_cols = colnames(y.all))$label
 
 # ok, now plot them somehow...
-colnames(prop.pb) = samp.meta$label
+colnames(prop.pb) = labels
 barplot(prop.pb, las=2)
 
-colnames(prop.jm) = samp.meta$label
+colnames(prop.jm) = labels
 o = order(colnames(prop.jm))
 barplot(prop.jm[,o], las=2)
 barplot(prop.pb[,o], las=2)
@@ -106,12 +96,12 @@ cols = hsv(seq(0,0.8,length.out=length(serogroups)), s = 0.7, v = 0.9)
 set.seed(4)
 cols = sample(cols)
 
-png("barplot_jm.png", width=800, height=500)
+png("figures/barplot_jm.png", width=800, height=500)
 par(mar=c(5,4,2,2))
 barplot(prop.jm[,o], las=2, col=cols, border=NA, xaxs="i", cex.names = 0.8)
 dev.off()
 
-png("barplot_pb.png", width=800, height=500)
+png("figures/barplot_pb.png", width=800, height=500)
 par(mar=c(5,4,2,2))
 barplot(prop.pb[,o], las=2, col=cols, border=NA, xaxs="i", cex.names = 0.8)
 dev.off()
