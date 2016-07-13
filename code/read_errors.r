@@ -28,6 +28,8 @@
 #' and dirichlet rather than binomial and beta. The mixing might be a bit sucky though (and without
 #' strong priors we may not explore the posterior space very well perhaps?)
 
+source("code/read_abundance.R")
+
 #' the sample
 y = c(1000, 200, 10, 1)
 
@@ -37,21 +39,6 @@ d[1,3] = d[3,1] = 3
 d[2,4] = d[4,2] = 1
 
 #' The real sample
-read_abundance <- function(file="sero_abundance.csv", removed=c(97,98,120,"ctrl")) {
-  y = read.csv(file, row.names=1)
-
-  # filter out the animals we don't need
-  if (length(removed) > 0) {
-    animal <- sub(".*_([0-9ctrl]+)_.*", "\\1", names(y))
-    y = y[,!(animal %in% as.character(removed))]
-  }
-
-  #' now filter those out who have less than 10 for consistency (previous
-  #' GSTs were also filtered by this criteria)
-  GSTs <- rowSums(y) < 10
-  y[!GSTs,]
-}
-
 appendix <- "_with_ctrl"
 y = rowSums(read_abundance(removed=c(97,98,120)))
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
