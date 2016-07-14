@@ -111,7 +111,7 @@ plot(d.mst.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.c
 dev.off()
 
 #' read in Patricks dataset
-y.patrick = rowSums(read.csv("patrick_cdhit_abundance.csv", row.names=1))
+y.patrick = rowSums(read.csv("temp/patrick_cdhit_abundance.csv", row.names=1))
 
 d.mst.patrick.high <- highlight_removed(d.mst, names(y.patrick))
 pdf("figures/tree_full_highlight_patrick.pdf", width=20, height=20)
