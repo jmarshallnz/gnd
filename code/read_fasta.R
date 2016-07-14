@@ -15,7 +15,7 @@ read_fasta <- function() {
   rows <- which(!(fa15meta$md5 %in% fa_names) & !fa15meta$serogroup %in% fa_names)
   
   #' reshape the fa data into a data frame
-  fa15 = data.frame(do.call(rbind, fa15))
+  fa15 = data.frame(do.call(rbind, fa15), stringsAsFactors = FALSE)
   fa15$md5 = substring(rownames(fa15), 1, 32)
   rownames(fa15) <- NULL
   
