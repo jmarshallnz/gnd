@@ -10,7 +10,6 @@ map_source <- mapping %>% left_join(fa15 %>% select(-md5), by=c('sample' = 'sero
 map_dest   <- mapping %>% left_join(fa15 %>% select(-md5), by=c('probable_source' = 'serogroup'))
 
 # now check the difference between them and highlight it...
-# TODO: CHANGE THIS BELOW TO DO THE MAPPING TO COLOURS BASED ON DIFFERENT DIFFERENCES (A->G etc.)
 map_table <- matrix(0, 4, 4)
 rownames(map_table) <- colnames(map_table) <- c("a","c","g","t")
 map_table[1,-1] <- 1:3
