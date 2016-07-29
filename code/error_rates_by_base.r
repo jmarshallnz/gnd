@@ -67,7 +67,7 @@ impurity <- function(x) {
 }
 # need to compute purity based on those that aren't errors
 no_error_serogroups <- fa15 %>% filter(!(serogroup %in% map_diff$sample))
-error_rates_by_base <- data.frame(errors = colSums(map_diff[,-c(1:2)]), impurity = apply(no_error_serogroups[,1:284], 2, impurity), triple=c(rep(letters[1:3],284/3),letters[1:2]))
+error_rates_by_base <- data.frame(errors = colSums(map_diff[,-c(1:2)]), impurity = apply(no_error_serogroups[,1:284], 2, impurity), triple=c(rep(letters[c(2,3,1)],284/3),letters[1:2]))
 
 # error rates by codon below here
 error_rates_per_codon <- error_rates_by_base %>% group_by(triple) %>% summarise(errors = sum(errors)) %>% as.data.frame
