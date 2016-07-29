@@ -33,6 +33,7 @@ plot(div.shannon, div.shannon.all, xlab="Shannon diversity (corrected)", ylab="S
 abline(0,1)
 dev.off()
 
+# faceted version
 pdf("figures/shannon_facet.pdf", width=6, height=7)
 par(mfrow=c(5,4), mar=rep(0.5, 4), oma=c(4,4,1,1))
 meta$shannon = div.shannon
@@ -55,4 +56,17 @@ for (i in seq_along(animals)) {
 }
 mtext("Shannon diversity (reduced data)", side = 1, outer=TRUE, at = 0.5, line=2, col = "grey50")
 mtext("Shannon diversity (all data)", side = 2, outer=TRUE, at = 0.5, line=2, col = "grey50")
+dev.off()
+
+# animal version
+pdf("figures/shannon_facet.pdf", width=6, height=5)
+par(mfrow=c(1,1), mar=c(4,4,2,2))
+plot(NULL, ylim=c(0,3), xlim=c(1,20), axes = FALSE, xlab="", ylab="")
+points(as.factor(meta$animal), meta$shannon, xlab="Animal", ylab="Shannon diversity", pch = meta$shape, bg= meta$hex, cex=meta$size)
+axis(2, at=0:3, cex.axis=0.8, las=1, col.axis = "grey50", col = "grey50", tck = -.02, labels=FALSE)
+mtext(0:3, side = 2, at=0:3, line=0.5, las=1, cex = 1, col = "grey50")
+axis(1, at=1:20, cex.axis=0.8, las=1, col.axis = "grey50", col = "grey50", tck = -.02, labels=FALSE)
+mtext(levels(as.factor(meta$animal)), side = 1, at=1:20, line=0.5, las=2, cex = 1, col = "grey50")
+mtext("Shannon diversity", side = 2, at = 1.5, line=2, col = "grey50")
+mtext("Animal", side = 1, at = 10, line=2.5, col = "grey50")
 dev.off()
