@@ -1,4 +1,5 @@
 library(readxl)
+library(dplyr)
 
 #' Function for reading in the metadata on each sample
 read_metadata <- function(file = "data/gnd_seqs_metadata.xlsx", animal_cols) {
