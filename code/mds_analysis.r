@@ -1,5 +1,5 @@
 #' MDS analyses
-library(MASS)
+library(vegan)
 library(RColorBrewer)
 source("code/read_metadata.R")
 
@@ -7,7 +7,15 @@ abund_samp = read.csv("no_error_abundance_with_ctrl.csv", row.names=1)
 abund_samp = t(abund_samp)
 abund_per_sample = abund_samp / rowSums(abund_samp)
 abund_dist = as.matrix(dist(abund_per_sample))
-samp.meta = read_metadata(animal_cols = rownames(abund_samp))
+
+meta <- read_metadata(animal_cols = rownames(abund_samp))
+
+# table for things
+shapes <- data.frame(treatment=c("pob", "por", "fec", "pre"), shape=c(22, 21, 22, 21), size=c(2, 2, 1, 1))
+shapes <- data.frame(treatment=c("pob", "por", "fec", "pre"), shape=c(22, 21, 23, 24), size=c(1, 1, 1, 1))
+cols <- read.csv("data/colours.csv", stringsAsFactors = FALSE) %>% arrange(animal_tag)
+
+meta = meta %>% mutate(animal = as.numeric(animal)) %>% left_join(cols, by=c('animal' = 'animal_tag')) %>% left_join(shapes, by=c('source' = 'treatment'))
 
 set.seed(5)
 
@@ -18,14 +26,14 @@ x <- mds$points[,1]
 y <- mds$points[,2]
 
 pdf("figures/mds.pdf", width=10, height=8)
-cols = c(brewer.pal(8, "Set2"), brewer.pal(8, "Dark2"), brewer.pal(8, "Accent"))
 plot(x, y, main="", type="n", xlab="", ylab="", xaxt="n", yaxt="n", xlim=c(min(x), max(x)+0.5))
-points(x,y,col=cols[as.numeric(as.factor(samp.meta$animal))], pch = 16+as.numeric(as.factor(samp.meta$source)))
-legend("topright", legend=levels(as.factor(samp.meta$animal)), pch=19, col=cols, cex=0.8)
-legend("topleft", legend=levels(as.factor(samp.meta$source)), pch=16+1:4, col=cols[24], cex=0.8)
+points(x,y,
+       col="black", pch=meta$shape, bg=meta$hex, cex=meta$size)
+legend("topright", legend=c(cols$animal_tag, "ctrl"), pch=c(rep(19, 20), 1), col=c(cols$hex, "black"), cex=0.8, pt.cex=c(rep(0.8, 20), 2), bty="n")
+legend("topleft", legend=shapes$treatment, pch=shapes$shape, col="grey30", cex=0.8, bty="n")
 #legend(2, 2, legend=c("chicken", "cow", "sheep", "water"), fill=1:4)
 
-wch = samp.meta$animal == "ctrl"
-points(x[wch], y[wch], cex=2)
+wch = is.na(meta$animal)
+points(x[wch], y[wch], cex=2, col="grey30")
 
 dev.off()
