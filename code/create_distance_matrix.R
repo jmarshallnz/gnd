@@ -6,7 +6,7 @@ source("code/read_fasta.R")
 fa15 = read_fasta()
 
 #' Now compute the distances between these things
-fa15.dist = as.matrix(daisy(fa15 %>% select(starts_with('X'))))
+fa15.dist = as.matrix(daisy(fa15 %>% select(starts_with('X')) %>% as.matrix %>% as.data.frame))
 rownames(fa15.dist) = fa15$serogroup
 colnames(fa15.dist) = fa15$serogroup
 write.csv(fa15.dist, "temp/sero_dist15.csv", row.names=TRUE)
