@@ -39,9 +39,9 @@ d[1,3] = d[3,1] = 3
 d[2,4] = d[4,2] = 1
 
 #' The real sample
-appendix <- "_with_ctrl"
-y = rowSums(read_abundance(removed=c(97,98,120)))
-d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
+appendix <- ""
+y = rowSums(read_abundance(removed=c(97,98,120,'ctrl')))
+d = as.matrix(round(read.csv("temp/sero_dist15.csv", row.names=1) * 284))
 
 d = d[names(y), names(y)]
 
@@ -50,6 +50,12 @@ K = max(d)
 
 #' Dirichlet prior on the unknown prevalences p
 prior_p = rep(0.00001, n)
+#' TODO: Try altering this to see how O25A changes if we increase the prior_p for this one...
+o_types = substring(names(y),1,1) == "O"
+o_type_bump <- 1
+prior_p[o_types] <- prior_p[o_types] * o_type_bump
+names(prior_p) <- names(y)
+prior_p["O25A"] <- 100
 
 #' Beta prior on the error rate e
 prior_e = c(40000,1000000)
@@ -116,6 +122,7 @@ post_x_means = apply(post_x,2:3,mean)
 rownames(post_x_means) = colnames(post_x_means) = rownames(d)
 post_x_means = post_x_means / rowSums(post_x_means)
 
+post_x_means["O25A",post_x_means["O25A",] > 0]
 
 # filter out those that are different
 rows = diag(post_x_means) < 0.5
