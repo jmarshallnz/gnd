@@ -73,8 +73,8 @@ col=c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
 
 actual_used <- unique(as.numeric(map_matrix))
 
-pdf("figures/error_maps_by_base_pairs_PGB.pdf", width=10, height=20)
-par(mar=c(4,6,2,10))
+pdf("figures/error_maps_by_base_pairs_PGB.pdf", width=10, height=10)
+par(mar=c(4,6,2,8))
 image(1:ncol(map_matrix), 1:nrow(map_matrix), t(map_matrix), col=col, xaxt="n", yaxt="n", xlab="", ylab="")
 axis(2, 1:nrow(map_matrix), rownames(map_matrix), las=2, cex.axis=0.6)
 axis(4, 1:nrow(map_matrix), map_diff[,2], las=2, cex.axis=0.6)
@@ -86,7 +86,7 @@ map_legend <- map_table %>% as.data.frame %>%
   gather("error", "colour", -source) %>%
   mutate(type = paste(source, "->", error)) %>%
   filter(colour %in% actual_used)
-legend(ncol(map_matrix)+40, nrow(map_matrix), legend=map_legend$type, fill=col[map_legend$col], xpd=TRUE, cex=0.6)
+legend(ncol(map_matrix)+30, nrow(map_matrix), legend=map_legend$type, fill=col[map_legend$col], xpd=TRUE, cex=0.6)
 #legend("topleft", legend=map_legend$type, fill=col[map_legend$col], xpd=TRUE, cex=0.6)
 dev.off()
 
