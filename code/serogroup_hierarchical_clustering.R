@@ -14,7 +14,7 @@ rownames(fa15.dist) = fa15$serogroup
 colnames(fa15.dist) = fa15$serogroup
 
 #' Reduce it down to those we're removing (do we want 80 or 84?)
-y = rowSums(read_abundance(removed=c(97,98,120)))
+y = rowSums(read_abundance(removed=c(97,98,12,'ctrl')))
 
 fa15.dist = fa15.dist[names(y), names(y)]
 
