@@ -7,6 +7,7 @@ source("code/read_abundance.R")
 y = rowSums(read_abundance())
 y.red = rowSums(read.csv("no_error_abundance.csv", row.names=1))
 d = as.matrix(round(read.csv("sero_dist15.csv", row.names=1) * 284))
+d = d[names(y), names(y)]
 
 #' Function to scale the abundances by so that the node size isn't
 #' too giant
