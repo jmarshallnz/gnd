@@ -47,38 +47,35 @@ write.csv(mapping, "temp/inconsistent_methods.csv", row.names=FALSE)
 
 y.all = read_abundance()
 y.jm = read.csv("no_error_abundance.csv", row.names=1)[,names(y.all)]
-y.pb = read.csv("patrick_cdhit_abundance.csv", row.names=1)[,names(y.all)]
+y.pb = read.csv("temp/patrick_cdhit_abundance.csv", row.names=1)[,names(y.all)]
 
 # make y.jm and y.pb into the joint size we need
 serogroups = union(rownames(y.pb), rownames(y.jm))
 
-# now we need length(serogroups) colours...
-
+# work out proportions
 prop.jm = matrix(0, length(serogroups), ncol(y.all))
 rownames(prop.jm) = serogroups
 colnames(prop.jm) = colnames(y.jm)
 prop.jm[rownames(y.jm),] = sweep(as.matrix(y.jm), 2, colSums(y.jm), "/")
-barplot(prop.jm)
 
 prop.pb = matrix(0, length(serogroups), ncol(y.all))
 rownames(prop.pb) = serogroups
 colnames(prop.pb) = colnames(y.all)
 prop.pb[rownames(y.pb),colnames(y.pb)] = sweep(as.matrix(y.pb), 2, colSums(y.pb), "/")
-barplot(prop.pb)
 
 # now figure out all the animal names (yay, this again...)
 
 #' Read in metadata
 source("code/read_metadata.R")
 
-labels <- read_metadata(animal_cols = colnames(y.all))$label
+meta <- read_metadata(animal_cols = colnames(y.all))
 
 # ok, now plot them somehow...
-colnames(prop.pb) = labels
+colnames(prop.pb) = meta$label
 barplot(prop.pb, las=2)
 
-colnames(prop.jm) = labels
-o = order(colnames(prop.jm))
+colnames(prop.jm) = meta$label
+o = order(as.numeric(meta$animal), meta$source)
 barplot(prop.jm[,o], las=2)
 barplot(prop.pb[,o], las=2)
 
