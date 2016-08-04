@@ -7,7 +7,7 @@ output: pdf_document
 ```{r, echo=FALSE, message=FALSE} 
 library(knitr)
 library(dplyr)
-mapping = read.csv("inconsistent_methods.csv")
+mapping = read.csv("temp/inconsistent_methods.csv")
 ```
 
 ### Serogroups that JM has that PB doesn't
