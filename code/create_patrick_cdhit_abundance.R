@@ -3,7 +3,7 @@ library(dplyr)
 
 source("code/read_abundance.R")
 
-pat = read.table("tableFromCluster348.txt", header=FALSE)
+pat = read.table("temp/tableFromCluster348.txt", header=FALSE)
 names(pat) <- c("serogroup", "seqLength", "ClusterNum", "repSequence")
 
 abund = read_abundance()
@@ -24,7 +24,7 @@ abundance$serogroup = rownames(abundance)
 new_abund = abundance %>% left_join(all_clust, by = c("serogroup" = "serogroup"))
 new_abund$wch = factor(new_abund$wch)
 
-new_abund2 = apply(new_abund[,1:96+1], 2, function(x) { tapply(x, new_abund$wch, sum) })
+new_abund2 = apply(new_abund[,1:96], 2, function(x) { tapply(x, new_abund$wch, sum) })
 new_abund2 = data.frame(serogroup = levels(new_abund$wch), new_abund2)
 write.csv(new_abund2, "temp/patrick_cdhit_abundance.csv", row.names=FALSE)
 
