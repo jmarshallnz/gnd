@@ -2,7 +2,7 @@
 source("code/read_fasta.R")
 
 mapping = read.csv("error_mapping.csv")
-mapping = read.csv("ID_mapping.csv")
+mapping = read.csv("ID_mapping.csv", stringsAsFactors = FALSE)
 
 
 read_fastaP <- function() {
@@ -28,7 +28,7 @@ read_fastaP <- function() {
   #' join our id table
   fa15_m = fa15 %>% left_join(fa15meta %>% select(md5, serogroup)) %>% filter(!is.na(serogroup))
   fa15_o = fa15 %>% left_join(fa15meta %>% select(md5, serogroup), by=c('md5'='serogroup')) %>% filter(!is.na(md5.y)) %>% rename(serogroup=md5, md5=md5.y)
-  fa15 = union(fa15_m, fa15_o)
+  fa15 = dplyr::union(fa15_m, fa15_o)
   
   fa15
 }
@@ -36,8 +36,8 @@ read_fastaP <- function() {
 fa15 = read_fastaP()
 
 #' compute difference maps and higlight them
-map_source <- mapping %>% left_join(fa15 %>% select(-md5), by=c('sample' = 'serogroup'))
-map_dest   <- mapping %>% left_join(fa15 %>% select(-md5), by=c('probable_source' = 'serogroup'))
+map_source <- mapping %>% left_join(fa15 %>% dplyr::select(-md5), by=c('sample' = 'serogroup'))
+map_dest   <- mapping %>% left_join(fa15 %>% dplyr::select(-md5), by=c('probable_source' = 'serogroup'))
 
 # now check the difference between them and highlight it...
 # TODO: CHANGE THIS BELOW TO DO THE MAPPING TO COLOURS BASED ON DIFFERENT DIFFERENCES (A->G etc.)
@@ -64,7 +64,7 @@ rownames(map_matrix) = map_diff[,1]
 
 # add in alternating background
 for (i in 1:nrow(map_matrix)) {
-  map_matrix[i, map_matrix[i,] == 0] <- 1-(as.numeric(map_diff[,2]) %% 2)[i] + 13
+  map_matrix[i, map_matrix[i,] == 0] <- 1-(as.numeric(as.factor(map_diff[,2])) %% 2)[i] + 13
 }
 
 col=c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", 
