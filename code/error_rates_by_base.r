@@ -73,7 +73,7 @@ error_rates_by_base <- data.frame(errors = colSums(map_diff[,-c(1:2)] > 0), impu
 error_rates_per_codon <- error_rates_by_base %>% group_by(triple) %>% summarise(errors = sum(errors)) %>% as.data.frame
 
 pdf("figures/errors_by_codon.pdf", width=6, height=6)
-barplot(error_rates_per_codon$errors, names=1:3, xlab = "Codon", ylab="Number of errors")
+barplot(error_rates_per_codon$errors, names=1:3, xlab = "Codon", ylab="Number of errors", ylim=c(0,120))
 dev.off()
 
 summary(glm(errors ~ impurity + triple, data=error_rates_by_base, family="quasipoisson"))
