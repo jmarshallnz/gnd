@@ -1,10 +1,13 @@
 #' Some stuff for figuring out read errors.
 #' 
-#' To do this, we assume that read errors arise (independently) with probability e,
-#' which will be small. We assume e is the same for each of the 284 bases, which is
-#' possibly complete rubbish, and may be able to be improved upon later.
+#' To do this, we assume that read errors arise (independently) with probability e per
+#' base, which will be small. We assume e is the same for each of the 284 bases and that
+#' errors are independent, and that at most one error occurs at each base (and all possible
+#' state transistions at the base have the same error rate).
 #' 
-#' Then we assume that the reads we get arise through a multinomial process based on the true
+#' In addition, we assume that all 'true' sequences in the sample have been observed.
+#' 
+#' Then we get that the reads we get arise through a multinomial process based on the true
 #' proportion of serogroups in the sample (and total number of reads).
 #' 
 #' Each of the reads then has a chance of being a bit wrong, so what ends up in the sample
@@ -20,42 +23,33 @@
 #' data with any luck, to give us information that we can use.
 #' 
 #' Note that this system is under-determined. We have e plus the n (number of serogroups) proportions
-#' to estimate, from just the n data points. Hopefully strong-ish priors on e and p will help!
+#' to estimate, from just the n data points. Strong-ish priors on e and p will help!
 #' 
 #' The maths turns out to be quite nice if you condition the likelihood on the true number of reads
 #' in serogroup i that are actually supposed to be serogroup j with error (or j = i with no error).
-#' It turns out that we can Gibbs sample then - basically it's like the LCA problem but using multinomial
-#' and dirichlet rather than binomial and beta. The mixing might be a bit sucky though (and without
-#' strong priors we may not explore the posterior space very well perhaps?)
+#' It turns out that we can Gibbs sample then - basically it's like the latent class problem for
+#' testing in the absence of a gold standard. but using multinomial and dirichlet rather than
+#' binomial and beta. We'll need to watch the mixing, and without strong priors we may not explore
+#' the posterior space very well if the mixing is poor.
+
+#' NOTE: Run create_distance_matrix.R first
 
 source("code/read_abundance.R")
 
-#' the sample
-y = c(1000, 200, 10, 1)
-
-#' The distances
-d = 10*(1 - diag(1, 4))
-d[1,3] = d[3,1] = 3
-d[2,4] = d[4,2] = 1
-
-#' The real sample
+#' The sample. Can optionally include controls here (e.g. for MDS plot in the paper)
 appendix <- ""
 y = rowSums(read_abundance(removed=c(97,98,120,'ctrl')))
 d = as.matrix(round(read.csv("temp/sero_dist15.csv", row.names=1) * 284))
-
 d = d[names(y), names(y)]
 
+#' Number of observed serogroups
 n = length(y)
+
+#' Maximal distance
 K = max(d)
 
 #' Dirichlet prior on the unknown prevalences p
 prior_p = rep(0.00001, n)
-#' TODO: Try altering this to see how O25A changes if we increase the prior_p for this one...
-o_types = substring(names(y),1,1) == "O"
-o_type_bump <- 1
-prior_p[o_types] <- prior_p[o_types] * o_type_bump
-names(prior_p) <- names(y)
-prior_p["O25A"] <- 100
 
 #' Beta prior on the error rate e
 prior_e = c(40000,1000000)
@@ -118,26 +112,18 @@ apply(post_p,2,mean)*sum(y)
 mean(post_e)
 hist(post_e)
 
+#' Compute posterior mean of latent variables, scaled to be a proportion from each type
 post_x_means = apply(post_x,2:3,mean)
 rownames(post_x_means) = colnames(post_x_means) = rownames(d)
 post_x_means = post_x_means / rowSums(post_x_means)
 
-post_x_means["O25A",post_x_means["O25A",] > 0]
-
-# filter out those that are different
+#' Find those types that are less than 50% chance of being real (diagonal will
+#' be those that arise correctly as this type..)
 rows = diag(post_x_means) < 0.5
 
-conf = seq(0,1,length.out=100)
-num_conf = unlist(lapply(conf, function(x) { sum(diag(post_x_means) <= x) }))
-plot(100*(1-conf), num_conf, type="l", ylab="Number of serogroups", xlab="Cut-off for arising from some other serogroup in error (%)")
-hist(100*diag(post_x_means), xlab="Probability of error", ylab="Number of serogroups", main="Likelihood of errors in serogroups", col="gray70")
-
-# repeat this for each posterior iteration instead
-
+#' Figure out how many types we'd have if we adjust the 50% cut-off above.
 conf = seq(0,1,length.out=100)
 count_errors = function(px, conf) {
-#  cat(dim(px))
-#  print(rowSums(px))
   cat("doing conf=", conf, "\n")
   sum(diag(px/rowSums(px)) <= conf)
 }
