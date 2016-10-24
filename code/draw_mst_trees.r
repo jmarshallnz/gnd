@@ -21,12 +21,12 @@ d.mst = set_vertex_attr(d.mst, "size", value=scale_abund(y))
 d.mst = set_edge_attr(d.mst, "weight", value=edge_attr(d.mst, "weight"))
 
 # label the big ones
-V(d.mst)$label = substring(V(d.mst)$name, pmax(nchar(V(d.mst)$name) - 4, 0))
-V(d.mst)$label[V(d.mst)$size < 1.5] = NA
+#V(d.mst)$label = substring(V(d.mst)$name, pmax(nchar(V(d.mst)$name) - 4, 0))
+#V(d.mst)$label[V(d.mst)$size < 1.5] = NA
 
 layout = layout_nicely(d.mst)
 pdf("figures/tree_full.pdf", width=20, height=20)
-plot(d.mst, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
+plot(d.mst, vertex.label = NA, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
 wch = names(y.red)
@@ -77,7 +77,7 @@ reduce_tree <- function(tree, vertices_to_remain) {
       sub = make_full_graph(length(v))
       # add vertex names
       V(sub)$name = names(v)
-      V(sub)$label = names(v)
+#      V(sub)$label = names(v)
       # now add edge weights. This is a bit trickier...
       dis_sub = distances(tree.red, v = v, to = v)
       # fill in the weights
@@ -100,7 +100,7 @@ reduce_tree <- function(tree, vertices_to_remain) {
 
 d.mst.high <- highlight_removed(d.mst, names(y.red))
 pdf("figures/tree_full_highlight.pdf", width=20, height=20)
-plot(d.mst.high, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
+plot(d.mst.high, vertex.label = NA, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
 d.mst.red = reduce_tree(d.mst, names(y.red))
@@ -108,7 +108,7 @@ pdf("figures/tree_simplified.pdf", width=20, height=20)
 layout.red = layout[match(V(d.mst.red)$name, V(d.mst)$name),]
 scale.y.red = scale_abund(y.red)
 V(d.mst.red)[names(y.red)]$size <- scale.y.red
-plot(d.mst.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout.red)
+plot(d.mst.red, vertex.label = NA, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout.red)
 dev.off()
 
 #' read in Patricks dataset
@@ -116,7 +116,7 @@ y.patrick = rowSums(read.csv("temp/patrick_cdhit_abundance.csv", row.names=1))
 
 d.mst.patrick.high <- highlight_removed(d.mst, names(y.patrick))
 pdf("figures/tree_full_highlight_patrick.pdf", width=20, height=20)
-plot(d.mst.patrick.high, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
+plot(d.mst.patrick.high, vertex.label = NA, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout)
 dev.off()
 
 d.mst.patrick.red = reduce_tree(d.mst, names(y.patrick))
@@ -124,5 +124,5 @@ pdf("figures/tree_simplified_patrick.pdf", width=20, height=20)
 layout.red.patrick = layout[match(V(d.mst.patrick.red)$name, V(d.mst)$name),]
 scale.y.patrick.red = scale_abund(y.patrick)
 V(d.mst.patrick.red)[names(y.patrick)]$size <- scale.y.patrick.red
-plot(d.mst.patrick.red, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout.red.patrick)
+plot(d.mst.patrick.red, vertex.label = NA, vertex.label.family="sans", vertex.label.cex=0.3, vertex.label.color = "black", layout=layout.red.patrick)
 dev.off()
