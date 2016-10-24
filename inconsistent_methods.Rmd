@@ -6,13 +6,14 @@ output: pdf_document
 
 ```{r, echo=FALSE, message=FALSE} 
 library(knitr)
+knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 mapping = read.csv("temp/inconsistent_methods.csv")
 ```
 
-### Serogroups that JM has that PB doesn't
+### Serogroups that the EC-method has that CD-Hit doesn't
 
-The following are those that JM has that PB doesn't have
+The following are those gST types that the error correction method has that CD-Hit doesn't have
 
 ```{r, comment=''}
 mapping %>% filter(jm & !pb) %>% select(-jm, -pb) %>% arrange(-abundance) %>% kable
@@ -24,9 +25,9 @@ By the looks the reason they're still legitimate is due to:
 2. They're low abundance, and the closest serogroup is not abundant enough to produce this
 many errors (given the estimated error rate).
 
-### Serogroups that PB has that JM doesn't
+### Serogroups that CD-hit has that the EC-method doesn't
 
-The following are those that PB has that JM hasn't
+The following are those that CD-hit has that the error correct method doesn't have
 
 ```{r, comment=''}
 mapping %>% filter(pb & !jm) %>% select(-jm, -pb) %>% arrange(-abundance) %>% kable
@@ -37,5 +38,5 @@ These are universally low abundance, and close to a serogroup with high abundanc
 ### All serogroups
 
 ```{r, comment=''}
-mapping %>% arrange(-abundance) %>% kable
+mapping %>% rename(EC_method = jm, CD_hit = pb) %>% arrange(-abundance) %>% kable
 ```
