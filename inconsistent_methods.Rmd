@@ -1,6 +1,6 @@
 ---
 title: "Inconsistencies between methods"
-author: "JM"
+author: ""
 output: pdf_document
 ---
 
