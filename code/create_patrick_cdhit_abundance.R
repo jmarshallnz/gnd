@@ -3,7 +3,7 @@ library(dplyr)
 
 source("code/read_abundance.R")
 
-pat = read.table("temp/tableFromCluster348.txt", header=FALSE)
+pat = read.table("data/cdhit/tableFromCluster348.txt", header=FALSE)
 names(pat) <- c("serogroup", "seqLength", "ClusterNum", "repSequence")
 
 abund = read_abundance()
