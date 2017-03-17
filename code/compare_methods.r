@@ -111,25 +111,94 @@ par(mar=c(5,4,2,2))
 barplot(prop.pb[,o], las=2, col=cols, border=NA, xaxs="i", cex.names = 0.8)
 dev.off()
 
-png("figures/barcode_jm_pb.png", width=1000, height=800)
+# hmm, maybe just find contiguous chunks where they differ??
+dc <- as.data.frame(t(abs(prop.jm - prop.pb)[,o]))
+dc$animal <- as.numeric(meta$animal[o])
+dc <- dc %>% group_by(animal) %>% summarize_all(funs(mean)) %>% arrange(desc(animal))
+# now find those that are large for each column
+find_large <- function(x, lim=0.2) {
+  batches <- list()
+  batch <- numeric(0)
+  print(x)
+  for (i in seq_along(x)) {
+    if (x[i] > lim) {
+      batch <- c(batch, i)
+      cat("accumlating batch\n")
+    } else {
+      if (length(batch) > 0) {
+        cat("appending batch\n")
+        batches <- c(batches, list(batch))
+      }
+      batch <- numeric(0)
+    }
+  }
+  if (length(batch) > 0) {
+    cat("appending batch\n")
+    batches <- c(batches, list(batch))
+  }
+  batches
+}
+differences <- lapply(dc[,-1], find_large, lim=0.05)
+differences <- differences[lapply(differences, length) > 0]
+
+ellipse <- function(x,y,...) {
+  theta <- seq(0,2*pi,length.out=1000)
+  mx <- mean(x)
+  my <- mean(y)
+  rx <- diff(range(x))/2 + 1
+  ry <- diff(range(y))/2 + 2.5
+  lines(mx + rx*cos(theta),my + ry*sin(theta),...)
+}
+
+pdf("figures/barcode_jm_pb.pdf", width=10, height=8)
 layout(matrix(1:3,ncol=3), width = c(10,10,1.5),height = c(1,1,0.3))
-par(oma=c(6,5,1,1))
+par(oma=c(7,7,1,1))
 par(mar=c(0,0,0,0.5))
 # try a heatmap instead
 trans <- function(x) {
   x
 }
 image(x = seq_len(nrow(prop.jm)), y = seq_len(ncol(prop.jm)), trans(prop.jm[,o]), col=grey(seq(1, 0, length.out=21)), axes=FALSE, xlab="", ylab="")
-axis(1, at=seq_len(nrow(prop.jm)), labels=row.names(prop.jm), las=2, cex.axis=0.6)
-axis(2, at=seq_len(ncol(prop.jm)), labels=colnames(prop.jm)[o], las=2, cex.axis=0.8)
+axis(1, at=seq_len(nrow(prop.jm)), labels=row.names(prop.jm), las=2, cex.axis=0.67)
+axis(2, at=seq_len(ncol(prop.jm)), labels=colnames(prop.jm)[o], las=2, cex.axis=0.87)
+
+# draw the ellipses
+#ellipses <- data.frame(gnd=c('O17','O176A','O17','O17','O17'), animal=c(112,112))
+#for (i in 1:nrow(ellipses)) {
+  # find coordinates
+#  x = which(ellipses$gnd[i] == rownames(prop.jm))
+#  y = which(ellipses$animal[i] == meta$animal[o])
+#  ellipse(x, y, lwd=1.5)
+#}
+
+# draw some ellipses
+for (i in seq_along(differences)) {
+  x <- which(names(differences[i]) == rownames(prop.jm))
+  for (j in seq_along(differences[[i]])) {
+    y <- ncol(prop.jm) - (differences[[i]][[j]] * 4 - 2.5)
+    ellipse(x, y, lwd=1.4)
+  }
+}
+
 par(mar=c(0,0.5,0,0))
 image(x = seq_len(nrow(prop.pb)), y = seq_len(ncol(prop.pb)), trans(prop.pb[,o]), col=grey(seq(1, 0, length.out=21)), axes=FALSE, xlab="", ylab="")
-axis(1, at=seq_len(nrow(prop.pb)), labels=row.names(prop.pb), las=2, cex.axis=0.6)
+axis(1, at=seq_len(nrow(prop.pb)), labels=row.names(prop.pb), las=2, cex.axis=0.67)
 #axis(2, at=seq_len(ncol(prop.pb)), labels=colnames(prop.pb)[o], las=2)
+mtext(expression(paste(italic(gnd),' sequence type')), side=1, at=0.47, line=5, outer=TRUE)
+mtext('Library (animal_extraction method)', side=2, at=0.47, line=5, outer=TRUE)
+
+# draw some ellipses
+for (i in seq_along(differences)) {
+  x <- which(names(differences[i]) == rownames(prop.jm))
+  for (j in seq_along(differences[[i]])) {
+    y <- ncol(prop.jm) - (differences[[i]][[j]] * 4 - 2.5)
+    ellipse(x, y, lwd=1.4)
+  }
+}
 
 legend_image <- as.raster(matrix(grey(seq(0, 1, length.out=21)), ncol=1))
 
-par(mar=c(0,0.5,2,0.5))
+par(mar=c(0,0.5,2,0.5),xpd=NA)
 plot(c(0,2),c(-5,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'Proportion')
 text(x=1.5, y = seq(0,1,l=5), labels = seq(0,1,l=5))
 rasterImage(legend_image, 0.5, 0, 1, 1)
