@@ -3,11 +3,13 @@ library(vegan)
 library(RColorBrewer)
 source("code/read_metadata.R")
 
+
+pdf("figures/mds.pdf", width=10, height=8)
+
 abund_samp = read.csv("no_error_abundance_with_ctrl.csv", row.names=1)
 abund_samp = t(abund_samp)
 abund_per_sample = abund_samp / rowSums(abund_samp)
 abund_dist = as.matrix(dist(abund_per_sample))
-
 meta <- read_metadata(animal_cols = rownames(abund_samp))
 
 # table for things
@@ -25,8 +27,7 @@ mds <- monoMDS(abund_dist,k=2)
 x <- mds$points[,1]
 y <- mds$points[,2]
 
-pdf("figures/mds.pdf", width=10, height=8)
-plot(x, y, main="", type="n", xlab="", ylab="", xaxt="n", yaxt="n", xlim=c(min(x), max(x)+0.5))
+plot(x, y, main="", type="n", xlab="Coordinate 1", ylab="Coordinate 2", xlim=c(min(x), max(x)+0.5))
 points(x,y,
        col="black", pch=meta$shape, bg=meta$hex, cex=meta$size)
 legend("topright", legend=c(cols$animal_tag, "ctrl"), pch=c(rep(19, 20), 1), col=c(cols$hex, "black"), cex=0.8, pt.cex=c(rep(0.8, 20), 2), bty="n")
