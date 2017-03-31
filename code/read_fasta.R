@@ -2,8 +2,8 @@ library(seqinr)
 library(dplyr)
 
 read_fasta <- function() {
-  fa15 = read.fasta("data/15thou_403seqs.fas")
-  fa15meta = read.table("data/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
+  fa15 = read.fasta("data/gnd2/solexaQA15thou_nucleotideGE10.fa")
+  fa15meta = read.table("data/gnd2/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
   
   #' Hmm, some of the names in the fasta file are O's...
   o_rows <- which(substring(names(fa15), 1, 1) == "O")

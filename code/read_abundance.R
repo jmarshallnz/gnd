@@ -1,5 +1,5 @@
 #' Code for reading in abundance information, potentially ignoring several animals
-read_abundance <- function(file="sero_abundance.csv", removed=c(97,98,120,"ctrl")) {
+read_abundance <- function(file="temp/sero_abundance.csv", removed=NULL) {
   y = read.csv(file, row.names=1)
   
   # filter out the animals we don't need

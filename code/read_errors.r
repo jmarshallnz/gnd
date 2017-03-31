@@ -38,8 +38,8 @@ source("code/read_abundance.R")
 
 #' The sample. Can optionally include controls here (e.g. for MDS plot in the paper)
 appendix <- ""
-y = rowSums(read_abundance(removed=c(97,98,120,'ctrl')))
-d = as.matrix(round(read.csv("temp/sero_dist15.csv", row.names=1) * 284))
+y = rowSums(read_abundance())
+d = as.matrix(read.csv("temp/sero_dist15.csv", row.names=1))
 d = d[names(y), names(y)]
 
 #' Number of observed serogroups
@@ -55,9 +55,9 @@ prior_p = rep(0.00001, n)
 prior_e = c(40000,1000000)
 
 #' MCMC control
-iters  = 50000
-burnin = 1000
-thin   = 100
+iters  = 5
+burnin = 1
+thin   = 1
 
 #' Storage for the posteriors
 post_e = rep(NA, iters/thin)
