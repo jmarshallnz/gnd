@@ -33,6 +33,21 @@ d <- data.frame(node1 = rownames(fa15.dist)[row],
                 abund2 = abund[col], stringsAsFactors = FALSE)
 d <- d %>% mutate(total = abund1 + abund2, ratio = pmin(abund1, abund2)/total)
 
+# see how many are potentially errors, and swap n1,n2 based on abundance
+dd <- d %>% filter(ratio < 0.01) %>%
+  mutate(one_bigger = pmax(abund1, abund2) == abund1,
+         n1 = ifelse(one_bigger, node1, node2),
+         n2 = ifelse(one_bigger, node2, node1))
+
+fakers <- dd %>% select(n2) %>% unique
+parent <- dd %>% select(n1) %>% unique
+
+# check none of the fakers are in the parents
+which(fakers$n2 %in% parent$n1)
+
+nrow(fakers)  
+nrow(parent)
+
 pdf("GND ratio of abundances.pdf", width=8, height=11)
 par(mfrow=c(3,1))
 hist(log10(d$ratio), xaxt = 'n', main = "Ratios from GNDs 1 SNP apart", xlab="Ratio")
