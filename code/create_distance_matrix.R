@@ -13,7 +13,7 @@ write.csv(fa15.dist, "temp/sero_dist15.csv", row.names=TRUE)
 
 #' Create abundance matrix
 fa15meta = read.table("data/gnd2/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
-fa15d = fa15 %>% select(serogroup) %>% left_join(fa15meta) %>% select(serogroup, starts_with('X'))
+fa15d = fa15 %>% select(serogroup) %>% left_join(fa15meta) %>% select(serogroup, starts_with('X'), starts_with('Ctrl'))
 rownames(fa15d) = fa15d$serogroup
-fa15d = fa15d %>% select(starts_with('X')) %>% as.matrix
+fa15d = fa15d %>% select(starts_with('X'), starts_with('Ctrl')) %>% as.matrix
 write.csv(fa15d, "temp/sero_abundance.csv", row.names=TRUE)
