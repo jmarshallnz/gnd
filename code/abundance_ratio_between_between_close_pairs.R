@@ -20,6 +20,11 @@ wch_1 <- which(fa15.dist == 1)
 col <- (wch_1-1) %/% nrow(fa15.dist) + 1
 row <- (wch_1-1) %% nrow(fa15.dist) + 1
 
+#' filter out the duplicates
+dedupe <- unique(cbind(pmin(col,row), pmax(col,row)))
+row <- dedupe[,1]
+col <- dedupe[,2]
+
 #' now pull out the abundances
 abund <- rowSums(fa15d)
 d <- data.frame(node1 = rownames(fa15.dist)[row],
