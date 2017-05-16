@@ -2,27 +2,48 @@ library(seqinr)
 library(dplyr)
 
 read_fasta <- function() {
-  fa15 = read.fasta("data/gnd2/solexaQA15thou_nucleotideGE10.fa")
-  fa15meta = read.table("data/gnd2/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE)
-  
-  #' Hmm, some of the names in the fasta file are O's...
-  o_rows <- which(substring(names(fa15), 1, 1) == "O")
-  
-  # now label the fa15 by serotroup rather than MD5, and merge to give id/sequence dataframe
-  fa_names <- substring(names(fa15),1,32)
-  
-  #' Hmm, the following rows are missing stuff
-  rows <- which(!(fa15meta$md5 %in% fa_names) & !fa15meta$serogroup %in% fa_names)
-  
+
+  # Read in the metadata (it has the abundances) and remove the non-functional groups
+  fa_meta = read.table("data/gnd2/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
+    filter(functional != 'no')
+
+  # read in the fasta file
+  fa = read.fasta("data/gnd2/solexaQA15thou_nucleotideGE10.fa")
+
+  # The fasta file does not include the O serogroups for some reason, so add them in as well
+  fa_O = read.fasta("data/gnd2/gnd_DB_09012017.fas")
+  # remap to use MD5
+  seq <- unlist(lapply(fa_O, function(x) { toupper(paste(x,collapse='')) }))
+  md5 <- unlist(lapply(seq, function(x) { digest(x, serialize=FALSE)}))
+  names(fa_O) <- md5
+  fa_O <- fa_O[!duplicated(md5)]
+
+  # FOR ADRIAN:
+#  known_serogroups <- data.frame(serogroup=names(md5), md5=md5, sequence=seq)
+#  write.csv(known_serogroups, "known_serogroups_MD5.csv", row.names=FALSE)
+  # FOR ADRIAN
+
+  # combine together
+  fa <- c(fa, fa_O)
+
+  # pull out the MD5s so we can map to serogroup in the metadata file
+  fa_md5 <- substring(names(fa),1,32)
+
+  # check we have sequences for all the gSTs
+
+  # we should have no sequences that aren't in the metadata file
+  if (sum(!fa_meta$md5 %in% fa_md5) != 0) {
+    print(which(!fa_meta$md5 %in% fa_md5))
+    stop("Error: We have MD5's in the minTotal file that we don't have sequences for!")
+  }
+
   #' reshape the fa data into a data frame
-  fa15 = data.frame(do.call(rbind, fa15), stringsAsFactors = FALSE)
-  fa15$md5 = substring(rownames(fa15), 1, 32)
-  rownames(fa15) <- NULL
-  
+  fa = data.frame(do.call(rbind, fa), stringsAsFactors = FALSE)
+  fa$md5 = substring(rownames(fa), 1, 32)
+  rownames(fa) <- NULL
+
   #' join our id table
-  fa15_m = fa15 %>% left_join(fa15meta %>% select(md5, serogroup)) %>% filter(!is.na(serogroup))
-  fa15_o = fa15 %>% left_join(fa15meta %>% select(md5, serogroup), by=c('md5'='serogroup')) %>% filter(!is.na(md5.y)) %>% rename(serogroup=md5, md5=md5.y)
-  fa15 = union(fa15_m, fa15_o)
-  
-  fa15
+  final <- fa_meta %>% select(md5, serogroup) %>% left_join(fa)
+
+  final
 }
