@@ -1,5 +1,16 @@
 #' compressed version of the matrix: Ignore any more than distance d away
 
+source("code/read_abundance.R")
+
+#' The sample. Can optionally include controls here (e.g. for MDS plot in the paper)
+#appendix <- ""
+#y = rowSums(read_abundance())
+fa15d <- read_abundance()
+fa15.dist = as.matrix(read.csv("temp/sero_dist15.csv", row.names=1))
+#d = d[names(y), names(y)]
+
+
+
 d <- 2
 #dist.comp <- vector("list", nrow(fa15.dist))
 dist.comp <- apply(fa15.dist, 1, function(x, d) { lapply(1:d, function(y) { which(x == y) }) }, d=2)
