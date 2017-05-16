@@ -25,7 +25,7 @@ abund <- rowSums(fa15d)
 d <- data.frame(node1 = rownames(fa15.dist)[row],
                 node2 = rownames(fa15.dist)[col],
                 abund1 = abund[row],
-                abund2 = abund[col])
+                abund2 = abund[col], stringsAsFactors = FALSE)
 d <- d %>% mutate(total = abund1 + abund2, ratio = pmin(abund1, abund2)/total)
 
 pdf("GND ratio of abundances.pdf", width=8, height=11)
