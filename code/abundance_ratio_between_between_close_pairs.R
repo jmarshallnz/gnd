@@ -1,5 +1,5 @@
 #' compressed version of the matrix: Ignore any more than distance d away
-
+library(dplyr)
 source("code/read_abundance.R")
 
 #' The sample. Can optionally include controls here (e.g. for MDS plot in the paper)
@@ -39,11 +39,30 @@ dd <- d %>% filter(ratio < 0.01) %>%
          n1 = ifelse(one_bigger, node1, node2),
          n2 = ifelse(one_bigger, node2, node1))
 
-fakers <- dd %>% select(n2) %>% unique
-parent <- dd %>% select(n1) %>% unique
+# find the fakers
+fakers <- dd %>% select(n2,n1) %>% unique %>% arrange(n2)
+
+# some of these are duplicates
+duped <- fakers$n2[duplicated(fakers$n2)]
+
+# link with their abundance
+fa15d$st <- rownames(fa15d)
+abund <- fa15d %>% left_join(fakers, by=c('st'='n2'))
+
+# TODO: 1. Distribute abundances across the duplicated rows
+
+# TODO: 2. Fill in n1 for those that are empty
+
+# TODO: 3. Group by n1 and sum everything up
+
+
+fakers[fakers$n2 %in% duped,]
 
 # check none of the fakers are in the parents
 which(fakers$n2 %in% parent$n1)
+
+# add in the non-fakers
+
 
 nrow(fakers)  
 nrow(parent)
