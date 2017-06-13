@@ -34,7 +34,7 @@ d <- data.frame(node1 = rownames(fa15.dist)[row],
 d <- d %>% mutate(total = abund1 + abund2, ratio = pmin(abund1, abund2)/total)
 
 # see how many are potentially errors, and swap n1,n2 based on abundance
-dd <- d %>% filter(ratio < 0.01) %>%
+dd <- d %>% filter(ratio < 0.05) %>%
   mutate(one_bigger = pmax(abund1, abund2) == abund1,
          n1 = ifelse(one_bigger, node1, node2),
          n2 = ifelse(one_bigger, node2, node1))
@@ -49,12 +49,27 @@ duped <- fakers$n2[duplicated(fakers$n2)]
 fa15d$st <- rownames(fa15d)
 abund <- fa15d %>% left_join(fakers, by=c('st'='n2'))
 
-# TODO: 1. Distribute abundances across the duplicated rows
 
-# TODO: 2. Fill in n1 for those that are empty
+# Distribute abundances across the duplicated rows
+duped <- abund$st[duplicated(abund$st)]
+for (i in seq_along(duped)) {
+  r <- which(abund$st == duped[i])
+  abund[r,1:92] <- abund[r,1:92] / length(r)
+}
 
-# TODO: 3. Group by n1 and sum everything up
+# Fill in n1 for those that are empty
+abund <- abund %>% mutate(n1 = ifelse(is.na(n1), st, n1))
 
+# Group by n1 and sum everything up
+final <- abund %>% select(-st) %>% group_by(n1) %>% summarise_all(sum)
+
+final$Totals <- rowSums(final[,-1])
+
+final <- final %>% rename(ST = n1)
+
+write.csv(final, "unfaked.csv", row.names=FALSE)
+
+summary(final$Totals)
 
 fakers[fakers$n2 %in% duped,]
 
@@ -90,3 +105,27 @@ axis(1, at=log10(10^c(-4:0)), labels = formatC(10^c(-4:0), width=5))
 hist(log10(d$ratio), xaxt = 'n', main = "Ratios from GNDs 2 SNP apart (zoomed in)", xlab="Ratio", ylim=c(0,350))
 axis(1, at=log10(10^c(-4:0)), labels = formatC(10^c(-4:0), width=5))
 dev.off()
+
+
+# check which control gSTs are potential fakers, given the known ones
+ctrl_gst <- rownames(fa15d)[which(fa15d[,91] > 0)]
+know_gst <- rownames(fa15d)[which(fa15d[,91] > 110)]
+
+error_gst <- setdiff(ctrl_gst, know_gst)
+
+# find distance between error_gst and know_gst
+diff <- apply(fa15.dist[error_gst, know_gst], 1, min)
+where <- know_gst[apply(fa15.dist[error_gst, know_gst], 1, which.min)]
+d1 <- data.frame(faker=error_gst, count=fa15d[error_gst,91], distance=diff, from=where,control="Ctrl01R1_S91")
+
+ctrl_gst <- rownames(fa15d)[which(fa15d[,92] > 0)]
+know_gst <- rownames(fa15d)[which(fa15d[,92] > 110)]
+error_gst <- setdiff(ctrl_gst, know_gst)
+
+# find distance between error_gst and know_gst
+diff <- apply(fa15.dist[error_gst, know_gst], 1, min)
+where <- know_gst[apply(fa15.dist[error_gst, know_gst], 1, which.min)]
+d2 <- data.frame(faker=error_gst, count=fa15d[error_gst,92], distance=diff, from=where,control="Ctrl02R1_S92")
+
+d <- rbind(d1, d2)
+write.csv(d, "control_errors.csv", row.names=FALSE)
