@@ -114,6 +114,7 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
 
 fk %>% filter(Distance > 1) %>% select(gST, Distance, Parent, Count) %>%
   left_join(all_counts %>% rename(Total=Count)) %>%
+  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_dist1)
 
 #' These have reasonably clearly been slotted in here when they shouldn't have. Are these
@@ -121,4 +122,19 @@ fk %>% filter(Distance > 1) %>% select(gST, Distance, Parent, Count) %>%
 #' one (highly prevalent) is an O serogroup. Also, the counts are low (1 or 2 max)
 
 #' Should we repeat the analysis with a differing quality threshold?? We might expect fewer
-#' fakers within the controls??
+#' fakers within the controls? YES, this is what happens.
+#' 
+#' Verdict: There is clear transfer/mislabelling of the library number. What is still unclear
+#'          is whether it's one library dominates that transfers to others (or does this
+#'          matter?) The error rate could be as large as 1/1000. e.g. id0015557 from Ctrl2.
+#'          
+#'          In addition, there seems to be evidence of both single SNP error AND library mislabelling
+#'          e.g. in id0013775 from Ctrl2 seems like it's most likely a 1 SNP difference plus
+#'          library mislabelling. The error rate might be very large again though? e.g. id0009599
+#'          in Ctrl 2 suggests 1/100 if all of them are single SNP+library mislabel, though I guess
+#'          we have evidence only that one is single SNP+library, so 1/2000. This seems to contradict
+#'          the 1/1000 suggestion above, nonetheless, or we have quite a high single SNP error rate,
+#'          or they're not independent (which seems unlikely?)
+#'
+#'          We note that this is 2 SNPs away from O55A though, so could arise if the dual-SNP error
+#'          rate was around 1/3000 or so.
