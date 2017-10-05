@@ -38,15 +38,25 @@ source("code/read_abundance.R")
 
 #' The sample. Can optionally include controls here (e.g. for MDS plot in the paper)
 appendix <- ""
-y = rowSums(read_abundance())
-d = as.matrix(read.csv("temp/sero_dist15.csv", row.names=1))
-d = d[names(y), names(y)]
+#y = rowSums(read_abundance())
+#d = as.matrix(read.csv("temp/sero_dist15.csv", row.names=1))
+#d = d[names(y), names(y)]
+
+#' A dummy sample. Consists of a control column and a second column
+#' with 1 known truth, and 4 others
+y = matrix(0, 4, 2)
+y[,1] = c(100, 10, 5, 5)
+y[,2] = c(5, 5, 100, 100)
+d <- 2 - diag(2, 4, 4)
+d[1,2] <- d[2,1] <- 1
+d[1,3] <- d[3,1] <- 1
+d[3,4] <- d[4,3] <- 1
+
+#' setup the structure of stuff based on genetic distance
+dn <- apply(d, 2, function(x) { which(x == 1) })
 
 #' Number of observed serogroups
-n = length(y)
-
-#' Maximal distance
-K = max(d)
+n = nrow(y)
 
 #' Dirichlet prior on the unknown prevalences p
 prior_p = rep(0.00001, n)
@@ -61,16 +71,24 @@ thin   = 1
 
 #' Storage for the posteriors
 post_e = rep(NA, iters/thin)
+post_f = rep(NA, iters/thin)
 post_p = matrix(NA, iters/thin, n)
-post_x = array(NA, dim=c(iters/thin, n, n))
+post_x = list() # control latent vars
+post_z = list()  # 'other' latent vars (which in future will be some over all other cols)
 
 #' Latent variables for the truth (assume our sample is truth to start)
-x = diag(y)
+nx <- lengths(dn)
+x <- lapply(seq_len(nrow(y)), function(n) { c(y[n,1], rep(0,nx[n])) })
+wx <- lapply(seq_len(nrow(y)), function(n) { c(n, dn[[n]])})
+sx <- y[,1] #' sum of x
+
+z <- lapply(seq_len(nrow(y)), function(n) { c(y[n,2], rep(0,nx[n])) })
+sz <- y[,2] #' sum of z
 
 #' Current values
-e = 0.01
-p = y / sum(y)
-ed = (1-e)^(K-d) * e^d
+e = 0.01 # error rate within library
+f = 0.01 # error rate between libraries (TODO: Does it need to be multiplicative with e?)
+p = sweep(y, 2, FUN='/', colSums(y))
 
 #' dirichlet function
 rdirichlet<-function(n,a)
@@ -85,18 +103,38 @@ rdirichlet<-function(n,a)
 j = 1
 for (l in 1:(iters + burnin)) {
   
-  #' 1. Gibbs update x
-  for (i in 1:nrow(x)) {
+  #' 1. Gibbs update x for the first column
+  sx = rep(0, length(x))
+  for (i in 1:length(x)) {
     #' x_{i.} = Multinomial(y_i, ...)
-    x[i,] = rmultinom(1, y[i], ed[i,]*p)
+    xp = as.numeric(rmultinom(1, y[i,1], c(1-e, rep(e, nx[i]))*p[wx[[i]],1]))
+    x[[i]] = xp
+    # also update sx[i] (sum of x i)
+    sx[wx[[i]]] = sx[wx[[i]]] + xp
+  }
+  #' 1b Gibbs update z for other columns (assumed to be truth ATM)
+  sz = rep(0, length(z))
+  for (i in 1:length(z)) {
+    #' z_{i.} = Multinomial(y_i, ...)
+    zp = as.numeric(rmultinom(1, y[i,1], c(1-f, rep(f, nx[i]))*p[wx[[i]],2]))
+    z[[i]] = zp
+    # also update sz[i] (sum of z i)
+    sz[wx[[i]]] = sz[wx[[i]]] + zp
   }
 
+
   #' 2. Gibbs update p
-  p = rdirichlet(1, colSums(x) + prior_p)
+  p[,1] = rdirichlet(1, sx + prior_p)
+  p[,2] = rdirichlet(1, sz + prior_p)
+
+  #' 2b TODO: Gibbs update p for other columns (assumed to be truth ATM)
 
   #' 3. Gibbs update e
-  e = rbeta(1, sum(d*x) + prior_e[1], sum((K-d)*x) + prior_e[2])
-  ed = (1-e)^(K-d) * e^d
+  s0x = sum(unlist(lapply(x, function(y) { y[1] })))
+  s1x = sx - s0x
+
+  e = rbeta(1, s0x + prior_e[1], s1x + prior_e[2])
+  f = rbeta(1, s0x + prior_e[1], s1x + prior_e[2])
 
   #' sample...
   if (l > burnin && (l-burnin) %% thin == 0) {
