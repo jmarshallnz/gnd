@@ -1,14 +1,17 @@
 library(seqinr)
 library(dplyr)
+library(digest)
 
-read_fasta <- function() {
+read_fasta <- function(qa=15) {
 
+  file_meta <- paste0("data/gnd2/solexaQA",qa,"thou_minTotalGE10.txt")
   # Read in the metadata (it has the abundances) and remove the non-functional groups
-  fa_meta = read.table("data/gnd2/solexaQA15thou_minTotalGE10.txt", header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
+  fa_meta = read.table(file_meta, header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
     filter(functional != 'no')
 
   # read in the fasta file
-  fa = read.fasta("data/gnd2/solexaQA15thou_nucleotideGE10.fa")
+  file_fa <- paste0("data/gnd2/solexaQA",qa,"thou_nucleotideGE10.fa")
+  fa = read.fasta(file_fa)
 
   # The fasta file does not include the O serogroups for some reason, so add them in as well
   fa_O = read.fasta("data/gnd2/gnd_DB_09012017.fas")
