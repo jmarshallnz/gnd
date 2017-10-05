@@ -18,7 +18,7 @@ ctrl <- fa15d %>% select(Ctrl1 = Ctrl01R1_S91counts, Ctrl2 = Ctrl02R1_S92counts)
   filter(Count > 0) %>% left_join(fa15, by=c('gST' = 'serogroup'))
 
 ctrl1 <- ctrl %>% filter(Control == "Ctrl2")
-genuine <- ctrl1 %>% filter(Count > 100) %>% pull(gST)
+genuine <- ctrl1 %>% filter(Count > 500) %>% pull(gST)
 
 # compute distance matrix
 DM <- ctrl1 %>% select(starts_with('X')) %>%
@@ -29,7 +29,7 @@ dist <- DM %>% as.data.frame %>% select(one_of(genuine)) %>% tibble::rownames_to
   gather(Parent, Distance, -gST) %>% group_by(gST) %>% summarize(Parent=Parent[which.min(Distance)], Distance = min(Distance)*284)
 
 fakers <- ctrl1 %>% filter(Count < 300) %>% select(-Control) %>% left_join(dist) %>%
-  left_join(ctrl1 %>% filter(Count > 300) %>% select(-Control, -Count, -md5), by=c("Parent"="gST")) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(-Control, -Count, -md5), by=c("Parent"="gST")) %>%
   gather(Gene, Value, starts_with('X')) %>% extract(Gene, into=c('Gene', 'Which'), regex="X([0-9]+)\\.([xy])",convert=TRUE) %>%
   spread(Which, Value) %>% mutate(z = ifelse(x==y,"",paste0(y,x)), Gene=sprintf('%03i',Gene))
 
@@ -44,12 +44,12 @@ fk %>% filter(Distance == 1) %>% pull(Parent) %>% table
 
 # Number of error gSTs and total count. It doesn't look proportional to parents really...
 fk %>% filter(Distance == 1) %>% group_by(Parent) %>% summarize(Num=n(), Count=sum(Count)) %>%
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   mutate(ErrorRate = Count/ParentCount*100)
 
 # Do the same thing, but by gST instead?
 fk %>% filter(Distance == 1) %>% select(gST, Count, Parent) %>%
-  left_join(ctrl1 %>% filter(Count > 300) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   mutate(ErrorRate = Count/ParentCount*100) %>% filter(Count > 1) %>% arrange(desc(ErrorRate))
 
 # hmm, this seems WAY too variable. What about counts across all sites?
@@ -58,7 +58,7 @@ all_counts <- fa15d %>% tibble::rownames_to_column("gST") %>% gather(Library, Co
 fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
   left_join(all_counts %>% rename(Total=Count)) %>% group_by(Parent) %>%
   summarize(Num=n(), Count=sum(Count), TotalCount=sum(Total)) %>%
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_counts %>% rename(Parent=gST,AllParentCount=Count)) %>%
   mutate(ErrorRateCount = Count/ParentCount*100, ErrorRateNum=Num/ParentCount*100,
          AllErrorRateCount = Count/AllParentCount*100, AllErrorRateNum=Num/AllParentCount*100)
@@ -66,7 +66,7 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
 #' Have a look at this by GST
 fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
   left_join(all_counts %>% rename(Total=Count)) %>% 
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_counts %>% rename(Parent=gST,AllParentCount=Count)) %>%
   mutate(ErrorRateCount = Count/ParentCount*100,
          AllErrorRateCount = Count/AllParentCount*100) %>% filter(Count > 1) %>% arrange(desc(ErrorRateCount))
@@ -85,7 +85,7 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
   left_join(all_dist1) %>%
   group_by(Parent) %>%
   summarize(Num=n(), Count=sum(Count), TotalCount=sum(Total), AllDist1Count=sum(AllDist1)) %>%
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_counts %>% rename(Parent=gST,AllParentCount=Count)) %>%
   mutate(ErrorRateCount = Count/ParentCount*100, ErrorRateNum=Num/ParentCount*100,
          AllErrorRateCount = Count/AllParentCount*100, AllErrorRateNum=Num/AllParentCount*100)
@@ -94,7 +94,7 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
 fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
   left_join(all_counts %>% rename(Total=Count)) %>%
   left_join(all_dist1) %>%
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_counts %>% rename(Parent=gST,AllParentCount=Count)) %>%
   mutate(ErrorRateCount = Count/ParentCount*100, AllErrorRateCount = Count/AllParentCount*100) %>%
   filter(Count > 1) %>% arrange(desc(ErrorRateCount))
@@ -114,7 +114,7 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
 
 fk %>% filter(Distance > 1) %>% select(gST, Distance, Parent, Count) %>%
   left_join(all_counts %>% rename(Total=Count)) %>%
-  left_join(ctrl1 %>% filter(Count > 100) %>% select(Parent=gST, ParentCount=Count)) %>%
+  left_join(ctrl1 %>% filter(gST %in% genuine) %>% select(Parent=gST, ParentCount=Count)) %>%
   left_join(all_dist1)
 
 #' These have reasonably clearly been slotted in here when they shouldn't have. Are these
@@ -138,3 +138,20 @@ fk %>% filter(Distance > 1) %>% select(gST, Distance, Parent, Count) %>%
 #'
 #'          We note that this is 2 SNPs away from O55A though, so could arise if the dual-SNP error
 #'          rate was around 1/3000 or so.
+#'
+#'
+#' Error model seems to be: Some (small-ish) probability of 1, 2 or 3 errors. Latter is zero in 15k,
+#' non-zero probably in 30k dataset.
+#' Then an independent error (small-ish) of transfer from another library.
+#' 
+#' It seems likely that we'll need both of these.
+#' 
+#' In 30k, id0010969 could be a candidate. It's 14 SNPs away from anything in this library, only
+#' 1 count out of 147. But also not 1SNP away from anything else. Could just be mislabel at rate
+#' approx 1 in 147. It's scattered across though, so unlikely.
+#' Rather, it's most likely generated from O109C...
+fa.dist.df %>% filter(gST2 == "id0010969", Distance <= 2) %>% left_join(all_counts)
+
+#' This one is distance 4 away from O123A, or distance 5 away from the one we observe...
+fa.dist.df %>% filter(gST2 == "id0040510", Distance <= 4) %>% left_join(all_counts)
+#' Error rates seem to be *very* high for this to happen... (1/8000 for 5 SNPS, 1/18000 for 4SNP+transfer)
