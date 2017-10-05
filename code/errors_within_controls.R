@@ -18,7 +18,7 @@ ctrl <- fa15d %>% select(Ctrl1 = Ctrl01R1_S91counts, Ctrl2 = Ctrl02R1_S92counts)
   filter(Count > 0) %>% left_join(fa15, by=c('gST' = 'serogroup'))
 
 ctrl1 <- ctrl %>% filter(Control == "Ctrl2")
-genuine <- ctrl1 %>% filter(Count > 500) %>% pull(gST)
+genuine <- ctrl1 %>% filter(Count > 300) %>% pull(gST)
 
 # compute distance matrix
 DM <- ctrl1 %>% select(starts_with('X')) %>%
@@ -109,6 +109,14 @@ fk %>% filter(Distance == 1) %>% select(gST, Parent, Count) %>%
 #' So why are they cropping up? What is the data generating process that leads to them being
 #' there? If we can't describe it, then just filtering based on some abundance proportion
 #' might be the best way to go?
+#' 
+#' Read errors likely differ between weird part of tree and normal part of tree. Seems to
+#' break into just 2 groups, so maybe use clustering to do so. Then assign single error
+#' rate based on group, plus bleed rate. Bleed rate likely proportional to total outside each library
+#'
+#' Also find good candidate reads to see if we can look at spatial stuff for bleeding and send to Patrick.
+
+
 
 #' What about the ones that are more than distance 1 away from their controls?
 
@@ -155,3 +163,9 @@ fa.dist.df %>% filter(gST2 == "id0010969", Distance <= 2) %>% left_join(all_coun
 #' This one is distance 4 away from O123A, or distance 5 away from the one we observe...
 fa.dist.df %>% filter(gST2 == "id0040510", Distance <= 4) %>% left_join(all_counts)
 #' Error rates seem to be *very* high for this to happen... (1/8000 for 5 SNPS, 1/18000 for 4SNP+transfer)
+
+fa.dist.df %>% filter(gST2 == "id0006651", Distance <= 8) %>% left_join(all_counts)
+
+#' TODO: Compare high error id's via translated amino acids between single SNP errors
+#'       and their parents. If the amino acids are the same then error occurring in population
+#'       but doesn't affect the bugs. If they're different, then plan B ;)
