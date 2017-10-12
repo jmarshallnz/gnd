@@ -22,7 +22,7 @@ library(cluster)
 source("code/read_abundance.R")
 source("code/read_fasta.R")
 
-qa <- 15 # quality level
+qa <- 3 # quality level
 
 #' Read in abundances
 abund <- read_abundance(file=paste0( "temp/sero_abundance", qa, ".csv"))
@@ -221,12 +221,12 @@ lambda_fit <- function(x) {
   (1-q) * (p*(1-p)*N1 + p*p*N2) + q*((1-p)*(1-p)*m + p*(1-p)*M1 + p*p*M2)
 }
 
-lambda <- rowMeans(apply(posterior[20:1000], 1, lambda_fit))
+lambda <- rowMeans(apply(posterior[20:1000,], 1, lambda_fit))
 out <- data.frame(gST = dat$gST, E=E, lambda=lambda, P=dpois(E, lambda))
-out %>% top_n(-10, P)
+out %>% top_n(-10, P) %>% arrange(P)
 
 # OK, now cluster the data based on kmedoids or whatever
-load("temp/sero_dist15.Rda")
+load("temp/sero_dist3.Rda")
 
 # do a clustering
 library(cluster)
@@ -248,10 +248,29 @@ write.csv(df, "temp/cluster2.csv", row.names=FALSE)
 # OK, a better way to go maybe is to use hclust to cluster
 # with single linkage, picking out any that are more than
 # say 20 BP away from anything else?
-hc <- hclust(as.dist(fa15.dist), method="single")
+hc <- hclust(as.dist(fa.dist), method="single")
 dend <- as.dendrogram(hc)
 
 # TODO: Run down the tree and grab everything that's not below h=20
 cutted <- cut(dend, h=10)
 # run down the
 labels(cutted$lower[[1]])
+plot(hc, labels=FALSE)
+member_list <- lapply(cutted$lower, labels)
+lengths(member_list)
+
+weirdos <- unlist(member_list[-which.max(lengths(member_list))])
+
+totals <- abund %>%
+  tibble::rownames_to_column("gST") %>% gather(Library, Count, -gST) %>%
+  group_by(gST) %>%
+  summarize(Count = sum(Count), maxCount=max(Count))
+
+weirdo_summary <- totals %>% filter(gST %in% weirdos)
+fa.dist.df %>% filter(Distance != 0) %>% group_by(gST) %>% top_n(-1, Distance)
+
+seq<-data.frame(sequence=seq, gST=sequences$serogroup, md5=sequences$md5)
+
+weirdo_summary <- weirdo_summary %>% left_join(seq)
+write.csv(weirdo_summary, "weirdos.csv", row.names = FALSE)
+# NOW: refit model with 2 different error rates.
