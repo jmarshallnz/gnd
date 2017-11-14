@@ -10,6 +10,7 @@ read_abundance <- function(file="temp/sero_abundance.csv", removed=NULL) {
   
   #' now filter those out who have less than 10 for consistency (previous
   #' GSTs were also filtered by this criteria)
-  GSTs <- rowSums(y) < 10
-  y[!GSTs,]
+#  GSTs <- rowSums(y) < 10
+#  y[!GSTs,]
+  y
 }
