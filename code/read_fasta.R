@@ -2,19 +2,21 @@ library(seqinr)
 library(dplyr)
 library(digest)
 
-read_fasta <- function(qa=15) {
+read_fasta <- function(farm=1, qa=15, minTotal=10) {
 
-  file_meta <- paste0("data/gnd2/solexaQA",qa,"thou_minTotalGE10.txt")
+  base_dir <- "data/gnd2"
+  farm_dir <- paste0("farm", farm)
+  file_meta <- paste0("solexaQA",qa,"thou_minTotalGE", minTotal, ".txt")
   # Read in the metadata (it has the abundances) and remove the non-functional groups
-  fa_meta = read.table(file_meta, header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
+  fa_meta = read.table(file.path(base_dir, farm_dir, file_meta), header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
     filter(functional != 'no')
 
   # read in the fasta file
-  file_fa <- paste0("data/gnd2/solexaQA",qa,"thou_nucleotideGE10.fa")
-  fa = read.fasta(file_fa)
+  file_fa <- paste0("solexaQA",qa,"thou_nucleotideGE", minTotal, ".fa")
+  fa = read.fasta(file.path(base_dir, farm_dir, file_fa))
 
   # The fasta file does not include the O serogroups for some reason, so add them in as well
-  fa_O = read.fasta("data/gnd2/gnd_DB_09012017.fas")
+  fa_O = read.fasta(file.path(base_dir, "gnd_DB_09012017.fas"))
   # remap to use MD5
   seq <- unlist(lapply(fa_O, function(x) { toupper(paste(x,collapse='')) }))
   md5 <- unlist(lapply(seq, function(x) { digest(x, serialize=FALSE)}))
@@ -40,13 +42,20 @@ read_fasta <- function(qa=15) {
     stop("Error: We have MD5's in the minTotal file that we don't have sequences for!")
   }
 
+  #' HMM, SEEMS TO BE AN ISSUE
+  wch <- which(lengths(fa) != 284)
+  if (length(wch) > 0) {
+    warning(paste("There seems to be", length(wch), "sequences in the fasta file that are the wrong length"))
+    fa <- fa[-wch]
+  }
   #' reshape the fa data into a data frame
   fa = data.frame(do.call(rbind, fa), stringsAsFactors = FALSE)
   fa$md5 = substring(rownames(fa), 1, 32)
   rownames(fa) <- NULL
 
-  #' join our id table
-  final <- fa_meta %>% select(md5, serogroup) %>% left_join(fa)
+  #' join our id table. NOTE use of inner_join here: We only want stuff we have both abundance and distance
+  #' information
+  final <- fa_meta %>% select(md5, serogroup) %>% inner_join(fa)
 
   final
 }
