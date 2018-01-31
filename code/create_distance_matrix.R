@@ -6,7 +6,7 @@ library(tidyr)
 
 source("code/read_fasta.R")
 
-farm <- 1
+farm <- 2
 qa <- 3
 minTotal <- 10
 

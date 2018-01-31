@@ -124,14 +124,21 @@ dat <- data.frame(Library=rownames(final_pca), pca$x) %>%
   left_join(final_dat %>% select(Library, Farm, AnimalID, Age) %>% unique) %>%
   mutate(Farm = factor(ifelse(Farm == "GB", 1, 2))) %>% mutate(Animal=factor(AnimalID))
 
-pdf("pca_both_farms.pdf", width=12, height=8)
+png("pca_both_farms.png", width=960, height=640)
 ggplot(dat, aes(x=PC1, y=PC2, col=Farm, size=Age)) + geom_point(alpha=0.5) +
-  theme_bw()
+  theme_bw(base_size = 20) + scale_color_hue(l=45)
 dev.off()
 
-pdf("pca_both_farms_zoom2.pdf", width=12, height=8)
-ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, size=Age)) + geom_point(alpha=0.5, col="#00BFC4") +
-  theme_bw()
+png("pca_farm2.png", width=960, height=640)
+#ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, col=scale_colour_hue(l=45)$palette(2)[2]) +
+ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, size=6) +
+  theme_bw(base_size = 20) # + scale_color_hue(l=45)
+dev.off()
+
+png("pca_farm2_animal.png", width=960, height=640)
+#ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, col=scale_colour_hue(l=45)$palette(2)[2]) +
+ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Animal)) + geom_point(alpha=0.5, size=6) +
+  theme_bw(base_size = 20)  + scale_color_discrete(l=45)
 dev.off()
 
 pdf("pca_both_farms_zoom2_by_animal.pdf", width=12, height=8)
