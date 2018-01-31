@@ -26,7 +26,7 @@ f2 <- read_farm_data(2, 3, 10)
 
 # read in the metadata
 read_farm_meta <- function(farm) {
-  read_excel("data/gnd2/meta/NZGL02276 metadata_021117.xlsx", sheet=farm) %>%
+  read_excel("data/gnd2/meta/NZGL02276 metadata_260118.xlsx", sheet=farm) %>%
     rename(Library = `Library no.`, AnimalID=`Animal ID`, Age=`Age (d)`)
 }
 meta <- bind_rows(read_farm_meta(1), read_farm_meta(2))
@@ -85,7 +85,8 @@ dev.off()
 topbunch <- f %>% group_by(Library) %>% arrange(desc(Proportion)) %>% mutate(CumProp=cumsum(Proportion)) %>%
   filter(CumProp < 0.90) %>% pull(gST) %>% unique
 
-final_dat <- f %>% filter(gST %in% topbunch)
+final_dat <- f %>% filter(gST %in% topbunch) %>%
+  mutate(Sampling = as.numeric(Sampling))
 
 # OK, now compute the stuff we need for an MDS plot
 final_dist <- final_dat %>%
@@ -101,18 +102,19 @@ y <- mds$points[,2]
 
 plot(x, y)
 dat <- data.frame(Library=rownames(final_dist), x=x, y=y) %>%
-  left_join(final_dat %>% select(Library, Farm, AnimalID, Age) %>% unique)
+  left_join(final_dat %>% select(Library, Farm, AnimalID, Age, Sampling, Treatment) %>% unique)
 
 pdf("mds_stressing_me_out.pdf", width=10, height=10)
 dat <- data.frame(Library=rownames(final_dist), x=x, y=y) %>%
-  left_join(final_dat %>% select(Library, Farm, AnimalID, Age) %>% unique)
+  left_join(final_dat %>% select(Library, Farm, AnimalID, Age, Sampling, Treatment) %>% unique)
 plot(y ~ x, col=factor(Farm), cex=sqrt(Age/50), data=dat)
 dev.off()
 
 # Try a PCA plot
 final_pca <- final_dat %>%
   select(gST, Library, Proportion) %>%
-  spread(Library, Proportion) %>% tibble::remove_rownames() %>% as.data.frame %>% tibble::column_to_rownames('gST') %>% t
+  spread(Library, Proportion) %>% tibble::remove_rownames() %>% as.data.frame %>%
+  tibble::column_to_rownames('gST') %>% t
 
 # Try a logit transformation? Use minimum value I guess?
 min_value <- min(final_pca[final_pca > 0]) / 10
@@ -121,28 +123,28 @@ f <- log(final_pca) - log(final_pca[,1])
 
 pca <- prcomp(f[,-1])
 dat <- data.frame(Library=rownames(final_pca), pca$x) %>%
-  left_join(final_dat %>% select(Library, Farm, AnimalID, Age) %>% unique) %>%
+  left_join(final_dat %>% select(Library, Farm, AnimalID, Sampling, Treatment) %>% unique) %>%
   mutate(Farm = factor(ifelse(Farm == "GB", 1, 2))) %>% mutate(Animal=factor(AnimalID))
 
 png("pca_both_farms.png", width=960, height=640)
-ggplot(dat, aes(x=PC1, y=PC2, col=Farm, size=Age)) + geom_point(alpha=0.5) +
+ggplot(dat, aes(x=PC1, y=PC2, col=Farm, size=Sampling, shape=Treatment)) + geom_point(alpha=0.5) +
   theme_bw(base_size = 20) + scale_color_hue(l=45)
 dev.off()
 
 png("pca_farm2.png", width=960, height=640)
 #ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, col=scale_colour_hue(l=45)$palette(2)[2]) +
-ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, size=6) +
+ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Sampling, shape=Treatment)) + geom_point(alpha=0.5, size=6) +
   theme_bw(base_size = 20) # + scale_color_hue(l=45)
 dev.off()
 
 png("pca_farm2_animal.png", width=960, height=640)
 #ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Age)) + geom_point(alpha=0.5, col=scale_colour_hue(l=45)$palette(2)[2]) +
-ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Animal)) + geom_point(alpha=0.5, size=6) +
+ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Animal, shape=Treatment)) + geom_point(alpha=0.5, size=6) +
   theme_bw(base_size = 20)  + scale_color_discrete(l=45)
 dev.off()
 
 pdf("pca_both_farms_zoom2_by_animal.pdf", width=12, height=8)
-ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Animal, size=Age)) + geom_point(alpha=0.5) +
+ggplot(dat %>% filter(Farm == 2, PC1 < 20), aes(x=PC1, y=PC2, col=Animal, size=Sampling)) + geom_point(alpha=0.5) +
   theme_bw()
 dev.off()
 
