@@ -126,6 +126,27 @@ dat <- data.frame(Library=rownames(final_pca), pca$x) %>%
   left_join(final_dat %>% select(Library, Farm, AnimalID, Sampling, Treatment) %>% unique) %>%
   mutate(Farm = factor(ifelse(Farm == "GB", 1, 2))) %>% mutate(Animal=factor(AnimalID))
 
+# dump out so we can do PERMANOVA type shit to it
+write_permanova <- function(dat, id, meta_cols) {
+  # pull out distance bit out
+  dat %>% select(-id, -meta_cols)
+  # compute distance
+  
+  # pull meta stuff
+  
+  # transpose meta stuff
+  
+  # tack onto end of distance stuff
+  
+  # (Hmm, maybe we should do it the other way around then transpose the whole lot??)
+}
+
+perm_dat <- as.data.frame(f) %>% tibble::rownames_to_column('Library') %>% 
+  left_join(final_dat %>% select(Library, Farm, AnimalID, Sampling, Treatment) %>% unique)
+
+write.csv(f_cols, "temp/permanova_dist_cols.csv", row.names=FALSE)
+
+
 png("pca_both_farms.png", width=960, height=640)
 ggplot(dat, aes(x=PC1, y=PC2, col=Farm, size=Sampling, shape=Treatment)) + geom_point(alpha=0.5) +
   theme_bw(base_size = 20) + scale_color_hue(l=45)
