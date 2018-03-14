@@ -129,7 +129,7 @@ dat <- data.frame(Library=rownames(final_pca), pca$x) %>%
 # dump out so we can do PERMANOVA type shit to it
 write_permanova <- function(dat, id, meta_cols) {
   # pull out distance bit out
-  dat %>% select(-id, -meta_cols)
+  dist <- dat %>% select(-id, -meta_cols)
   # compute distance
   
   # pull meta stuff
@@ -144,7 +144,17 @@ write_permanova <- function(dat, id, meta_cols) {
 perm_dat <- as.data.frame(f) %>% tibble::rownames_to_column('Library') %>% 
   left_join(final_dat %>% select(Library, Farm, AnimalID, Sampling, Treatment) %>% unique)
 
-write.csv(f_cols, "temp/permanova_dist_cols.csv", row.names=FALSE)
+id <- "Library"
+meta_cols <- c("Farm", "AnimalID", "Sampling", "Treatment")
+dist_dat <- perm_dat[,!names(perm_dat) %in% c(id, meta_cols)]
+# compute distance
+d <- as.matrix(dist(dist_dat))
+rownames(d) <- perm_dat[,id]
+colnames(d) <- perm_dat[,id]
+# combine with metadata, and transpose
+out <- t(cbind(as.data.frame(d), Empty="", perm_dat[,meta_cols]))
+rownames(out)[rownames(out) == "Empty"] <- ""
+write.csv(out, "temp/permanova_dist_cols.csv", row.names=TRUE)
 
 
 png("pca_both_farms.png", width=960, height=640)
