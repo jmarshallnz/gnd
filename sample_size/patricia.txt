@@ -1,0 +1,6 @@
+Serogroup When Positive Negative
+O157      Pre         3       27
+O157      Post        1       29
+O26       Pre        10       40
+O26       Post        5       45
+
