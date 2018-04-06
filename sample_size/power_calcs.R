@@ -51,8 +51,12 @@ for (i in 1:nrow(pow_range)) {
 }
 pow_range$delta_p = delta_p
 #write.csv(pow_range, "data/sample_size_test.csv", row.names=FALSE)
+write.csv(pow_range, "data/sample_size_test.csv", row.names=FALSE)
+
+pow_range = read.csv("data/sample_size_test.csv")
 pow_range$Deff = paste0("Deff=", pow_range$Deff)
 pow_range$num = factor(paste0("n=", pow_range$n), levels=paste0("n=", seq(200,1000, by=200)))
+
 
 # add on prevalences from Patricia's work.
 # These are very much best-guess. They're actually probably lower than this...

@@ -1,0 +1,46 @@
+---
+title: Sample size and statistical power for detecting change in STEC prevalence from
+  intervention
+output:
+  word_document: default
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+library(ggplot2)
+library(broom)
+pow_range = read.csv("../data/sample_size_test.csv")
+pow_range$Deff = paste0("Deff=", pow_range$Deff)
+pow_range$num = factor(paste0("n=", pow_range$n), levels=paste0("n=", seq(200,1000, by=200)))
+
+# add on prevalences from Patricia's work.
+# These are very much best-guess. They're actually probably lower than this...
+pre_val <- 13/60
+post_val <- 6/60
+pre_est <- broom::tidy(binom.test(13, 60))
+pre_est2 <- broom::tidy(binom.test(13, 60, conf.level=0.5))
+
+band <- data.frame(x=c(pre_est$conf.low, pre_est$conf.high), ymin=0, ymax=max(pow_range$delta_p, na.rm=TRUE)+0.02)
+band2 <- data.frame(x=c(pre_est2$conf.low, pre_est2$conf.high), ymin=0, ymax=max(pow_range$delta_p, na.rm=TRUE)+0.02)
+```
+
+When estimating sample size for the difference in prevalence, there are a number of things to consider. The first is the baseline prevalence (prevalence of STEC on carcass swabs taken pre-intervention) and the second is the reduction in prevalence that we wish to be able to have statistical power to detect. The larger the difference is likely to be, the smaller the sample size we'll need to detect that difference, or the more statistical power we'd have for a given sample size. In addition, we need to account for the likely lack of independence between carcass swabs: There is likely to be clustering by carcass (i.e. if a swab is positive then other swabs on the same carcass are more likely to be positive), and this is likely to be at quite a high level. Further, there is likely to be some (smaller) clustering by plant (and/or by cohort of animals processed), as we know that transport and lairage are avenues for cross-contamination between animals. Thus, the 'design effect', which is the amount at which the variance in estimated parameters are inflated due to lack of independence, is likely to be significant, perhaps on the order of between 2 and 5, depending on the number of carcass swabs taken per carcass.
+
+The figure below captures the various parameters that contribute to estimating prevalence reduction, including sample size (from $n=200$ to $n=1000$ swabs each pre and post intervention), the design effect (from 2 to 5), the pre-intervention prevalence, the statistical power and the detectable reduction in prevalence. Generally, as pre-intervention prevalence increases or the design effect increases, the minimum detectable reduction in prevalence also increases, while as the sample size increases a smaller reduction in prevalence due to intervention can be detected. The dotted lines correspond to the prevalence (and reduction following intervention) of O157 or O26 observed in Jaros et. al, with grey bands representing 50% and 95% confidence intervals.
+
+```{r, fig.cap="Detectable reduction in prevalence versus initial prevalence by statistical power for a range of sample sizes and design effects. The dotted lines correspond to the prevalence (and reduction following intervention) observed in Jaros. et. al. Grey bands correspond to 50% and 95% confidence bands for the pre-intervenion prevalence.", echo=FALSE, message=FALSE}
+ggplot(pow_range) + geom_line(aes(x=p1,y=delta_p,col=factor(power))) +
+  facet_grid(Deff~num) +
+  theme_bw() +
+  scale_color_manual(name='Power', values=c('black', 'red')) +
+  ylab("Detectable reduction in prevalence") +
+  xlab("Pre-intervention prevalence") + 
+  geom_vline(xintercept=13/60, linetype='dotted') + 
+  geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), data=band, alpha=0.2) +
+  geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), data=band2, alpha=0.2) +
+  geom_hline(yintercept=7/60, linetype='dotted') +
+  scale_y_continuous(expand=c(0,0)) +
+  ggtitle("Statistical power and detectable reduction in prevalance",
+          subtitle="For different sample sizes, design effects and pre-intervention prevalence")
+```
