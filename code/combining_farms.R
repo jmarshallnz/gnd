@@ -252,3 +252,29 @@ plot(pca_time)
 
 dat <- cbind(time_outcome, pca_time$x)
 plot(PC2 ~ PC1, data=dat, col=factor(Farm))
+
+# Find which gSTs are there at >0.1% and >1% per farm
+gSTs <- f %>% group_by(Farm, gST) %>% summarize(Count = sum(Count)) %>% group_by(Farm) %>%
+  mutate(Proportion = Count/sum(Count)) %>%
+  filter(Proportion > 0.001) %>% select(Farm, Proportion, gST) %>% spread(Farm, Proportion, fill=0) %>%
+  arrange(desc(`RB/GA` == 0), desc(GB), `RB/GA`)
+
+
+write.csv(gSTs, "gsts_greater_than_0.1_on_a_farm.csv", row.names=FALSE)
+write.csv(gSTs %>% filter(GB > 0.01 | `RB/GA` > 0.01), 
+          "gsts_greater_than_1.0_on_a_farm.csv", row.names=FALSE)
+
+# Find which gSTs are there at >0.1% and >1% per library
+gSTs <- f %>% filter(Proportion > 0.001) %>% select(Farm, Library, gST, Proportion) %>% group_by(Farm, gST) %>%
+  summarize(Number = n(), MaxProportion = max(Proportion)) %>% gather(Summary, Value, Number, MaxProportion) %>%
+  unite(FarmSummary, Farm, Summary) %>% spread(FarmSummary, Value, fill=0) %>%
+  arrange(desc(`RB/GA_MaxProportion`==0), desc(`GB_MaxProportion`), desc(`GB_Number`), `RB/GA_MaxProportion`, `RB/GA_Number`)
+
+write.csv(gSTs, "gsts_greater_than_0.1_on_a_library.csv", row.names=FALSE)
+
+gSTs <- f %>% filter(Proportion > 0.01) %>% select(Farm, Library, gST, Proportion) %>% group_by(Farm, gST) %>%
+  summarize(Number = n(), MaxProportion = max(Proportion)) %>% gather(Summary, Value, Number, MaxProportion) %>%
+  unite(FarmSummary, Farm, Summary) %>% spread(FarmSummary, Value, fill=0) %>%
+  arrange(desc(`RB/GA_MaxProportion`==0), desc(`GB_MaxProportion`), desc(`GB_Number`), `RB/GA_MaxProportion`, `RB/GA_Number`)
+
+write.csv(gSTs, "gsts_greater_than_1.0_on_a_library.csv", row.names=FALSE)
