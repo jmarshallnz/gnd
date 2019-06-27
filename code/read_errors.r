@@ -32,6 +32,10 @@
 #' binomial and beta. We'll need to watch the mixing, and without strong priors we may not explore
 #' the posterior space very well if the mixing is poor.
 
+#' NOTE: The below code has been updated (but not fully) to try and handle between-library errors
+#'       instead of just within-library errors. This is not working. Need to roll back should others
+#'        wish to use it to the master branch
+#'        
 #' NOTE: Run create_distance_matrix.R first
 
 source("code/read_abundance.R")
