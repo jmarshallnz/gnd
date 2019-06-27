@@ -2,21 +2,16 @@ library(seqinr)
 library(dplyr)
 library(digest)
 
-read_fasta <- function(farm=1, qa=15, minTotal=10) {
+read_fasta_paths <- function(path_meta, path_fasta, path_gnd_db, read_length=284) {
 
-  base_dir <- "data/gnd2"
-  farm_dir <- paste0("farm", farm)
-  file_meta <- paste0("solexaQA",qa,"thou_minTotalGE", minTotal, ".txt")
   # Read in the metadata (it has the abundances) and remove the non-functional groups
-  fa_meta = read.table(file.path(base_dir, farm_dir, file_meta), header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
+  fa_meta = read.table(path_meta, header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
     filter(functional != 'no')
 
-  # read in the fasta file
-  file_fa <- paste0("solexaQA",qa,"thou_nucleotideGE", minTotal, ".fa")
-  fa = read.fasta(file.path(base_dir, farm_dir, file_fa))
+  fa = read.fasta(path_fasta)
 
   # The fasta file does not include the O serogroups for some reason, so add them in as well
-  fa_O = read.fasta(file.path(base_dir, "gnd_DB_09012017.fas"))
+  fa_O = read.fasta(path_gnd_db)
   # remap to use MD5
   seq <- unlist(lapply(fa_O, function(x) { toupper(paste(x,collapse='')) }))
   md5 <- unlist(lapply(seq, function(x) { digest(x, serialize=FALSE)}))
@@ -24,8 +19,8 @@ read_fasta <- function(farm=1, qa=15, minTotal=10) {
   fa_O <- fa_O[!duplicated(md5)]
 
   # FOR ADRIAN:
-#  known_serogroups <- data.frame(serogroup=names(md5), md5=md5, sequence=seq)
-#  write.csv(known_serogroups, "known_serogroups_MD5.csv", row.names=FALSE)
+  #  known_serogroups <- data.frame(serogroup=names(md5), md5=md5, sequence=seq)
+  #  write.csv(known_serogroups, "known_serogroups_MD5.csv", row.names=FALSE)
   # FOR ADRIAN
 
   # combine together
@@ -43,9 +38,9 @@ read_fasta <- function(farm=1, qa=15, minTotal=10) {
   }
 
   #' HMM, SEEMS TO BE AN ISSUE
-  wch <- which(lengths(fa) != 284)
+  wch <- which(lengths(fa) != read_length)
   if (length(wch) > 0) {
-    warning(paste("There seems to be", length(wch), "sequences in the fasta file that are the wrong length"))
+    warning(paste("There seems to be", length(wch), "sequences in the fasta file that are the wrong length (not", read_length, ")"))
     fa <- fa[-wch]
   }
   #' reshape the fa data into a data frame
@@ -58,4 +53,21 @@ read_fasta <- function(farm=1, qa=15, minTotal=10) {
   final <- fa_meta %>% select(md5, serogroup) %>% inner_join(fa)
 
   final
+}
+
+read_fasta <- function(farm=1, qa=15, minTotal=10) {
+
+  # Setup paths  
+  base_dir <- "data/gnd2"
+  farm_dir <- paste0("farm", farm)
+  file_meta <- paste0("solexaQA",qa,"thou_minTotalGE", minTotal, ".txt")
+  path_meta <- file.path(base_dir, farm_dir, file_meta)
+
+  file_fa <- paste0("solexaQA",qa,"thou_nucleotideGE", minTotal, ".fa")
+  path_fasta <- file.path(base_dir, farm_dir, file_fa)
+
+  path_gnd_db <- file.path(base_dir, "gnd_DB_09012017.fas")
+
+  read_fasta_paths(path_meta, path_fasta, path_gnd_db, read_length = 284)
+
 }
