@@ -15,6 +15,10 @@ fa <- read_fasta(farm=farm, qa=qa, minTotal=minTotal)
 #' Chop down fa...
 fa$sequence <- apply(fa[,-c(1:2)], 1, paste0, collapse='')
 
+# Distances here - close distances below. Old EC code uses full distance. Could probably be adapted
+# to use close distance (as with error low, only those matter) but that means changing read errors.r to use
+# some sort of sparse matrix form, and working with essentially infinite distances
+
 #' Close distances
 #fa.close.df = calc_dist(fa$serogroup, fa$sequence, 4) # use 4 cores
 #save(fa.close.df, file=paste0("temp/sero_close",qa,"_", minTotal, "_df.Rda"))
