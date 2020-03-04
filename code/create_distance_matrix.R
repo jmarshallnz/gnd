@@ -57,24 +57,10 @@ parents <- fa_d %>% gather(Library, Count, -serogroup) %>% group_by(serogroup) %
   filter(Count >= parent_min_abund) %>%
   left_join(fa %>% select(serogroup, sequence))
 
+source("code/closest_parents.R") #< builds c++
+
 #' Compute the distance between each sequence and the parents
-Rcpp::sourceCpp('src/close_dist.cpp')
-dist.close <- list()
-system.time(for (i in 1:nrow(fa)) {
-  dist = dist_to_parents(fa$sequence[i], parents$sequence)
-  # technically we don't need *all* the distances.
-  # We need only those within, say, 5, and the minimum one.
-  wch <- which(dist <= 5)
-  if (length(wch) == 0) {
-    wch <- which.min(dist)
-  }
-  # OK, now construct the distance dataframe
-  dist.close[[i]] <- data.frame(gST = fa$serogroup[i], gST2 = parents$serogroup[wch], Distance = dist[wch], stringsAsFactors = FALSE)
-  if (i %% 1000 == 0) {
-    cat("Up to i=", i, "of", nrow(fa), "\n")
-  }
-})
-fa.close.df <- do.call(rbind, dist.close)
+fa.close.df <- closest_parents(fa$serogroup, fa$sequence, parents$serogroup, parents$sequence, min_dist = 5)
 out_file <- paste0("sero_close",qa,"_", minTotal, "_df.Rda")
 save(fa.close.df, file=file.path(out_dir, out_file))
 

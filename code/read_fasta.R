@@ -2,54 +2,65 @@ library(seqinr)
 library(dplyr)
 library(digest)
 
+read_fasta_files <- function(md5s, fasta_paths, read_length = 284) {
+
+  read_fasta_file <- function(file) {
+    fa  <- read.fasta(file)
+    seq <- lapply(fa, function(x) { toupper(paste(x,collapse='')) })
+    md5 <- unlist(lapply(seq, function(x) { digest(x, serialize=FALSE)}))
+
+    # get rid of duplicates
+    names(fa) <- md5
+    fa <- fa[!duplicated(md5)]
+
+    fa
+  }
+
+  if (!is.list(fasta_paths)) {
+    fasta_paths = as.list(fasta_paths)
+  }
+  fa_list <- lapply(fasta_paths, read_fasta_file)
+  fa_all <- do.call(c, fa_list)
+
+  # check we have sequences for all the MD5's requested
+  if (sum(!md5s %in% names(fa_all)) != 0) {
+    print(which(!md5s %in% names(fa_all)))
+    stop("Error: We have MD5's that we don't have sequences for!")
+  }
+
+  # check the lengths
+  wch <- which(lengths(fa_all) != read_length)
+  if (length(wch) > 0) {
+    warning(paste("There seems to be", length(wch), "sequences in the fasta file that are the wrong length (not", read_length, "). These will be removed."))
+    fa_all <- fa_all[-wch]
+  }
+
+  # reshape into a data.frame
+  fa <- data.frame(do.call(rbind, fa_all), stringsAsFactors = FALSE) %>%
+    tibble::rownames_to_column("md5")
+
+  # return object for further processing
+  fa %>% filter(md5 %in% md5s)
+}
+
 read_fasta_paths <- function(path_meta, path_fasta, path_gnd_db, read_length=284) {
 
   # Read in the metadata (it has the abundances) and remove the non-functional groups
   fa_meta = read.table(path_meta, header=TRUE, sep="\t", stringsAsFactors = FALSE) %>%
     filter(functional != 'no')
 
-  fa = read.fasta(path_fasta)
+  md5s = fa_meta$md5
 
-  # The fasta file does not include the O serogroups for some reason, so add them in as well
-  fa_O = read.fasta(path_gnd_db)
-  # remap to use MD5
-  seq <- unlist(lapply(fa_O, function(x) { toupper(paste(x,collapse='')) }))
-  md5 <- unlist(lapply(seq, function(x) { digest(x, serialize=FALSE)}))
-  names(fa_O) <- md5
-  fa_O <- fa_O[!duplicated(md5)]
+  # TODO:  Update this so that a list of fasta files are sent in, and the ID used for mapping is always the MD5.
+  # that way the label in the fasta file doesn't matter so much (or at all) - we can then take the identifier
+  # from the abundance file if we want to do so later. We do need the metadata (abundance file) here because
+  # in theory the fasta file may contain stuff that the abundance file doesn't. We could just pass in a set
+  # of MD5's to match on though rather than the file - i.e. split loading of that out
+  
+  fasta_files = list(path_fasta, path_gnd_db)
 
-  # FOR ADRIAN:
-  #  known_serogroups <- data.frame(serogroup=names(md5), md5=md5, sequence=seq)
-  #  write.csv(known_serogroups, "known_serogroups_MD5.csv", row.names=FALSE)
-  # FOR ADRIAN
+  fa = read_fasta_files(md5s, fasta_files, read_length)
 
-  # combine together
-  fa <- c(fa, fa_O)
-
-  # pull out the MD5s so we can map to serogroup in the metadata file
-  fa_md5 <- substring(names(fa),1,32)
-
-  # check we have sequences for all the gSTs
-
-  # we should have no sequences that aren't in the metadata file
-  if (sum(!fa_meta$md5 %in% fa_md5) != 0) {
-    print(which(!fa_meta$md5 %in% fa_md5))
-    stop("Error: We have MD5's in the minTotal file that we don't have sequences for!")
-  }
-
-  #' HMM, SEEMS TO BE AN ISSUE
-  wch <- which(lengths(fa) != read_length)
-  if (length(wch) > 0) {
-    warning(paste("There seems to be", length(wch), "sequences in the fasta file that are the wrong length (not", read_length, ")"))
-    fa <- fa[-wch]
-  }
-  #' reshape the fa data into a data frame
-  fa = data.frame(do.call(rbind, fa), stringsAsFactors = FALSE)
-  fa$md5 = substring(rownames(fa), 1, 32)
-  rownames(fa) <- NULL
-
-  #' join our id table. NOTE use of inner_join here: We only want stuff we have both abundance and distance
-  #' information
   final <- fa_meta %>% select(md5, serogroup) %>% inner_join(fa)
 
   final
